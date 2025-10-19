@@ -3,7 +3,7 @@ import { DIFFICULTY } from './js/difficulty.js';
 import { Vampire, Bullet, Particle, BloodSplatter, FloatingText } from './js/entities.js';
 import { tutorialSteps, nextTutorialStep, startTutorial } from './js/tutorial.js';
 import { getRandomUpgrades, applyUpgrade } from './js/upgrades.js';
-import { soundManager } from './js/sounds.js';
+import { soundManager } from './js/sound.js';
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 // Load assets
@@ -590,4 +590,217 @@ function showUpgradeScreen() {
             <div class="upgrade-description">${upgrade.description}</div>
             <div class="upgrade-level">Level ${upgrade.currentLevel} → ${upgrade.currentLevel + 1}</div>
         `;
-        card.onclick = () => selectUpgrade(
+        card.onclick = () => selectUpgrade(upgrade.key);
+    });
+    
+    upgradeScreen.style.display = 'flex';
+}
+
+function selectUpgrade(upgradeKey) {
+    // Apply the upgrade
+    applyUpgrade(player, player.upgrades, upgradeKey);
+    
+    // Hide upgrade screen
+    document.getElementById('upgrade-screen').style.display = 'none';
+    
+    // Continue to next wave
+    setTimeout(() => {
+        game.wave++;
+        updateHUD();
+        spawnWave();
+    }, 500);
+}
+
+function gameOver() {
+    game.state = 'gameOver';
+    soundManager.play('gameOver');
+    soundManager.stopMusic();
+    
+    // Update final stats
+    document.getElementById('final-difficulty').textContent = 
+        game.difficulty.toUpperCase();
+    document.getElementById('final-wave').textContent = game.wave;
+    document.getElementById('final-kills').textContent = game.kills;
+    document.getElementById('final-score').textContent = game.score;
+    
+    // Show game over screen
+    document.getElementById('game-over').style.display = 'flex';
+}
+
+function initGame() {
+    // Reset game state
+    game.state = 'playing';
+    game.wave = 1;
+    game.kills = 0;
+    game.score = 0;
+    game.waveInProgress = false;
+    game.waitingForNextWave = false;
+    game.expectedEnemies = 0;
+    game.spawnedEnemies = 0;
+    
+    // Reset player
+    const diff = DIFFICULTY[game.difficulty];
+    player.health = diff.playerHealth;
+    player.maxHealth = diff.playerHealth;
+    player.speed = diff.playerSpeed;
+    player.weapon.damage = diff.playerDamage;
+    player.weapon.fireRate = diff.fireRate;
+    player.maxDashCooldown = diff.dashCooldown;
+    player.weapon.piercing = 0;
+    player.dashCooldown = 0;
+    player.isDashing = false;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+    
+    // Clear arrays
+    bullets.length = 0;
+    enemies.length = 0;
+    particles.length = 0;
+    bloodSplatters.length = 0;
+    floatingTexts.length = 0;
+    
+    // Update HUD
+    updateHUD();
+    
+    // Start first wave
+    spawnWave();
+}
+
+// Draw function
+function draw() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (game.state === 'playing' || game.state === 'tutorial') {
+        // Draw player
+        if (images.player.complete) {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            ctx.drawImage(images.player, -player.size/2, -player.size/2, player.size, player.size);
+            ctx.restore();
+        } else {
+            // Fallback player drawing
+            ctx.fillStyle = '#4a90e2';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw bullets
+        bullets.forEach(bullet => bullet.draw(ctx));
+        
+        // Draw enemies
+        enemies.forEach(enemy => enemy.draw(ctx));
+        
+        // Draw particles
+        particles.forEach(particle => particle.draw(ctx));
+        
+        // Draw blood splatters
+        bloodSplatters.forEach(splatter => splatter.draw(ctx));
+        
+        // Draw floating texts
+        floatingTexts.forEach(text => text.draw(ctx));
+    }
+}
+
+// Main game loop
+let lastTime = 0;
+function gameLoop(currentTime) {
+    const deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
+    
+    update();
+    draw();
+    
+    requestAnimationFrame(gameLoop);
+}
+
+// UI Event Handlers
+function setupEventListeners() {
+    // Difficulty selection
+    document.getElementById('tutorial-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        startTutorial(game, initGame);
+    });
+    
+    document.getElementById('easy-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        game.difficulty = 'easy';
+        document.getElementById('start-screen').style.display = 'none';
+        initGame();
+        soundManager.playMusic();
+    });
+    
+    document.getElementById('normal-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        game.difficulty = 'normal';
+        document.getElementById('start-screen').style.display = 'none';
+        initGame();
+        soundManager.playMusic();
+    });
+    
+    document.getElementById('hard-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        game.difficulty = 'hard';
+        document.getElementById('start-screen').style.display = 'none';
+        initGame();
+        soundManager.playMusic();
+    });
+    
+    // Game over buttons
+    document.getElementById('play-again-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        document.getElementById('game-over').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    });
+    
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        document.getElementById('game-over').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    });
+    
+    // Tutorial next button
+    document.getElementById('tutorial-next').addEventListener('click', () => {
+        soundManager.play('uiClick');
+        nextTutorialStep(game, player, updateHUD, spawnWave);
+    });
+    
+    // Mute button
+    const muteBtn = document.getElementById('mute-btn');
+    muteBtn.addEventListener('click', () => {
+        const isMuted = soundManager.toggle();
+        muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        muteBtn.classList.toggle('muted', isMuted);
+    });
+}
+
+// Initialize everything when page loads
+window.addEventListener('load', () => {
+    // Wait for images to load
+    const checkImagesLoaded = () => {
+        if (imagesLoaded >= totalImages) {
+            setupEventListeners();
+            
+            // Show start screen
+            document.getElementById('start-screen').style.display = 'flex';
+            
+            // Start game loop
+            gameLoop();
+        } else {
+            setTimeout(checkImagesLoaded, 100);
+        }
+    };
+    
+    checkImagesLoaded();
+});
+
+// Handle visibility change (pause when tab is not active)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        game.paused = true;
+    } else {
+        game.paused = false;
+    }
+});

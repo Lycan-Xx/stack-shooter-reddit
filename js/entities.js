@@ -1,6 +1,6 @@
 // Game entities
 import { DIFFICULTY } from './difficulty.js';
-import { soundManager } from './sounds.js';
+import { soundManager } from './sound.js';
 
 export class Vampire {
     constructor(x, y, wave, difficulty, images, player) {
