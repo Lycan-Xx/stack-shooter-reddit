@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampire Hunter: Night of the Blood Moon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+        }
+        
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            cursor: none;
+        }
+        
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, #1a0a1a 0%, #0a0a0a 100%);
+            cursor: none;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-size: 18px;
+        }
+        
+        .hud-item {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.6);
+            border-left: 4px solid #c41e3a;
+            backdrop-filter: blur(5px);
+        }
+        
+        @media (max-width: 768px) {
+            #hud {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                font-size: 12px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+                max-width: calc(100% - 20px);
+            }
+            
+            .hud-item {
+                margin-bottom: 0;
+                padding: 5px 8px;
+                border-left-width: 2px;
+                flex: 0 0 auto;
+            }
+            
+            .hud-item:first-child {
+                flex: 1 1 100%;
+            }
+            
+            .hud-item strong {
+                display: none;
+            }
+            
+            .hud-item:nth-child(2)::before {
+                content: 'W:';
+                font-weight: bold;
+                margin-right: 3px;
+            }
+            
+            .hud-item:nth-child(3)::before {
+                content: '🧛:';
+                margin-right: 3px;
+            }
+            
+            .hud-item:nth-child(4)::before {
+                content: '💀:';
+                margin-right: 3px;
+            }
+            
+            .hud-item:nth-child(5)::before {
+                content: '🔫:';
+                margin-right: 3px;
+            }
+            
+            .hud-item:nth-child(6)::before {
+                content: '⭐:';
+                margin-right: 3px;
+            }
+        }
+        
+        #difficulty-badge {
+            position: absolute;
+            top: 20px;
+            right: 85px;
+            padding: 15px 25px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #c41e3a;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+        
+        @media (max-width: 768px) {
+            #difficulty-badge {
+                top: 10px;
+                right: 60px;
+                padding: 8px 12px;
+                font-size: 14px;
+                border-width: 2px;
+            }
+        }
+        
+        #dash-cooldown {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            text-align: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        #dash-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(50,50,50,0.8);
+            border: 2px solid #4a90e2;
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #dash-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #64b5f6);
+            transition: width 0.1s;
+            box-shadow: 0 0 10px #4a90e2;
+        }
+        
+        #tutorial-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border: 3px solid #c41e3a;
+            border-radius: 10px;
+            max-width: 600px;
+            color: #fff;
+            text-align: center;
+            display: none;
+            pointer-events: all;
+        }
+        
+        #tutorial-overlay h3 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #c41e3a;
+        }
+        
+        #tutorial-overlay p {
+            font-size: 18px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .tutorial-step {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(196, 30, 58, 0.2);
+            border-left: 3px solid #c41e3a;
+        }
+        
+        #health-bar {
+            width: 200px;
+            height: 25px;
+            background: rgba(50,0,0,0.8);
+            border: 2px solid #c41e3a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #c41e3a, #ff4444);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px #c41e3a;
+        }
+        
+        #health-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            #health-bar {
+                width: 120px;
+                height: 20px;
+            }
+            
+            #health-text {
+                line-height: 20px;
+                font-size: 11px;
+            }
+        }
+        
+        #wave-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #c41e3a;
+            text-shadow: 0 0 20px #c41e3a, 2px 2px 8px #000;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        
+        #game-over, #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            pointer-events: all;
+        }
+        
+        #start-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #c41e3a;
+            text-shadow: 0 0 20px #c41e3a;
+        }
+        
+        #start-screen p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+            padding: 0 20px;
+        }
+        
+        /* Mobile menu adjustments */
+        @media (max-width: 768px) {
+            #start-screen h1 {
+                font-size: 28px;
+                margin-bottom: 15px;
+                padding: 0 20px;
+            }
+            
+            #start-screen p {
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+        }
+        
+        .btn {
+            padding: 15px 40px;
+            font-size: 24px;
+            background: linear-gradient(135deg, #c41e3a, #8b0000);
+            color: #fff;
+            border: 2px solid #c41e3a;
+            cursor: pointer;
+            pointer-events: all;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px rgba(196, 30, 58, 0.5);
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #ff4444, #c41e3a);
+            box-shadow: 0 0 30px rgba(196, 30, 58, 0.8);
+            transform: scale(1.05);
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .tutorial-btn-menu {
+            font-size: 20px;
+            padding: 15px 50px;
+        }
+        
+        .difficulty-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .difficulty-btn {
+            font-size: 18px;
+            padding: 12px 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .tutorial-btn-menu {
+                font-size: 18px;
+                padding: 12px 40px;
+            }
+            
+            .difficulty-btn {
+                font-size: 16px;
+                padding: 10px 20px;
+                flex: 1 1 calc(50% - 10px);
+                min-width: 120px;
+            }
+            
+            .difficulty-buttons {
+                gap: 10px;
+                width: 100%;
+                max-width: 400px;
+                padding: 0 20px;
+            }
+        }
+        
+        #game-over {
+            display: none;
+        }
+        
+        #game-over h2 {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #c41e3a;
+            text-shadow: 0 0 30px #c41e3a;
+        }
+        
+        #final-stats {
+            font-size: 24px;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            padding: 0 20px;
+        }
+        
+        @media (max-width: 768px) {
+            #game-over h2 {
+                font-size: 42px;
+            }
+            
+            #final-stats {
+                font-size: 18px;
+            }
+            
+            #game-over .btn {
+                font-size: 16px !important;
+                padding: 12px 20px !important;
+            }
+            
+            #game-over > div:last-child {
+                flex-direction: column;
+                gap: 10px !important;
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+        
+        .controls {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #aaa;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        .controls div {
+            margin: 5px 0;
+        }
+        
+        .controls .desktop-only {
+            display: block;
+        }
+        
+        .controls .mobile-only {
+            display: none;
+        }
+        
+        @media (max-width: 768px), (hover: none) {
+            .controls {
+                font-size: 14px;
+            }
+            
+            .controls .desktop-only {
+                display: none;
+            }
+            
+            .controls .mobile-only {
+                display: block;
+            }
+        }
+        
+        #crosshair {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #c41e3a;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #c41e3a;
+            display: none;
+        }
+        
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #c41e3a;
+            box-shadow: 0 0 5px #c41e3a;
+        }
+        
+        #crosshair::before {
+            width: 12px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #crosshair::after {
+            width: 2px;
+            height: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        #upgrade-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            pointer-events: all;
+            z-index: 100;
+        }
+        
+        #upgrade-screen h2 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            animation: pulse 2s infinite;
+        }
+        
+        #upgrade-screen p {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #aaa;
+        }
+        
+        #upgrade-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+        }
+        
+        .upgrade-card {
+            background: linear-gradient(135deg, rgba(196, 30, 58, 0.3), rgba(139, 0, 0, 0.3));
+            border: 3px solid #c41e3a;
+            border-radius: 15px;
+            padding: 30px;
+            width: 250px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .upgrade-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 10px 40px rgba(196, 30, 58, 0.6);
+            border-color: #ff4444;
+        }
+        
+        .upgrade-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+        
+        .upgrade-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        
+        .upgrade-description {
+            font-size: 16px;
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .upgrade-level {
+            font-size: 14px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            #upgrade-screen h2 {
+                font-size: 36px;
+            }
+            
+            #upgrade-screen p {
+                font-size: 18px;
+            }
+            
+            .upgrade-card {
+                width: 200px;
+                padding: 20px;
+            }
+            
+            .upgrade-icon {
+                font-size: 48px;
+            }
+            
+            .upgrade-name {
+                font-size: 20px;
+            }
+            
+            .upgrade-description {
+                font-size: 14px;
+            }
+        }
+        
+        /* Desktop WASD Controls Indicator */
+        #desktop-wasd-controls { 
+            position: fixed; 
+            left: 30px; 
+            bottom: 30px; 
+            z-index: 1000; 
+            pointer-events: none; 
+        }
+        .wasd-container { 
+            display: flex; 
+            gap: 16px; 
+            align-items: flex-end; 
+        }
+        .wasd-main {
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+            align-items: center; 
+        }
+        .wasd-row { 
+            display: flex; 
+            gap: 4px; 
+            align-items: center; 
+        }
+        .wasd-vertical { 
+            display: flex; 
+            flex-direction: row; 
+            gap: 4px; 
+            align-items: center; 
+        }
+        .wasd-key { 
+            width: 45px; 
+            height: 45px; 
+            background: rgba(0,0,0,0.75); 
+            border: 2px solid rgba(196, 30, 58, 0.6); 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font: 600 16px 'Segoe UI', Arial, sans-serif;
+            color: rgba(255,255,255,0.95); 
+            backdrop-filter: blur(10px); 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 2px rgba(196, 30, 58, 0.2); 
+            transition: all 0.2s ease;
+        }
+
+        .spacebar-key {
+            width: 120px !important;
+            height: 35px !important;
+            font: 600 14px 'Segoe UI', Arial, sans-serif !important;
+            border-radius: 8px !important;
+        }
+
+        .wasd-key.active { 
+            background: rgba(196, 30, 58, 0.85); 
+            border-color: rgba(196, 30, 58, 0.9); 
+            color: #ffffff; 
+            transform: scale(0.95); 
+            box-shadow: 0 4px 20px rgba(196, 30, 58, 0.6), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        /* Hide on mobile */
+        @media (max-width: 768px) {
+            #desktop-wasd-controls { 
+                display: none; 
+            }
+        }
+        /* Hide when UI is hidden */
+        body.ui-hidden #desktop-wasd-controls {
+            display: none !important;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* Joystick */
+        #joystick-container {
+            position: absolute;
+            left: 40px;
+            bottom: 40px;
+            width: 120px;
+            height: 120px;
+            pointer-events: all;
+        }
+
+        #joystick-base {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: rgba(0,0,0,0.75);
+            border: 3px solid rgba(196, 30, 58, 0.6);
+            border-radius: 50%;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 2px 4px rgba(196, 30, 58, 0.2);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(196, 30, 58, 0.85);
+            border: 2px solid rgba(196, 30, 58, 0.9);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 10px rgba(196, 30, 58, 0.6), inset 0 1px 2px rgba(255,255,255,0.3);
+            transition: all 0.1s ease;
+        }
+
+        #joystick-stick.active {
+            background: rgba(255, 68, 68, 0.95);
+            box-shadow: 0 4px 20px rgba(196, 30, 58, 0.8), inset 0 1px 2px rgba(255,255,255,0.4);
+        }
+
+        /* Dash button */
+        #mobile-dash {
+            position: absolute;
+            right: 40px;
+            bottom: 40px;
+            width: 80px;
+            height: 80px;
+            background: rgba(0,0,0,0.75);
+            border: 3px solid rgba(196, 30, 58, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font: 600 16px 'Segoe UI', Arial, sans-serif;
+            color: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 2px 4px rgba(196, 30, 58, 0.2);
+            transition: all 0.2s ease;
+            pointer-events: all;
+            user-select: none;
+        }
+
+        #mobile-dash.active {
+            background: rgba(196, 30, 58, 0.85);
+            border-color: rgba(196, 30, 58, 0.9);
+            color: #ffffff;
+            transform: scale(0.95);
+            box-shadow: 0 4px 20px rgba(196, 30, 58, 0.6), inset 0 2px 4px rgba(255,255,255,0.3);
+        }
+
+        /* Show mobile controls on mobile devices */
+        @media (max-width: 768px), (hover: none) {
+            #mobile-controls {
+                display: block;
+            }
+        }
+
+        /* Hide when UI is hidden */
+        body.ui-hidden #mobile-controls {
+            display: none !important;
+        }
+        
+        /* Mute Button */
+        #mute-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0,0,0,0.75);
+            border: 2px solid rgba(196, 30, 58, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 2px rgba(196, 30, 58, 0.2);
+            cursor: pointer;
+            z-index: 2000;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        #mute-btn:hover {
+            background: rgba(196, 30, 58, 0.85);
+            border-color: rgba(196, 30, 58, 0.9);
+            transform: scale(1.1);
+            box-shadow: 0 4px 20px rgba(196, 30, 58, 0.6), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+        
+        #mute-btn.muted {
+            background: rgba(100, 100, 100, 0.75);
+            border-color: rgba(150, 150, 150, 0.6);
+        }
+        
+        #mute-btn.muted:hover {
+            background: rgba(150, 150, 150, 0.85);
+            border-color: rgba(180, 180, 180, 0.9);
+        }
+        
+        @media (max-width: 768px) {
+            #mute-btn {
+                top: 60px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+        
+        /* Keep mute button visible even when UI is hidden */
+        body.ui-hidden #mute-btn {
+            opacity: 0.5;
+        }
+        
+        body.ui-hidden #mute-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="hud">
+                <div class="hud-item">
+                    <div id="health-bar">
+                        <div id="health-fill"></div>
+                        <div id="health-text">100 / 100</div>
+                    </div>
+                </div>
+                <div class="hud-item">
+                    <strong>Wave:</strong> <span id="wave">1</span>
+                </div>
+                <div class="hud-item">
+                    <strong>Vampires:</strong> <span id="enemies">0</span>
+                </div>
+                <div class="hud-item">
+                    <strong>Kills:</strong> <span id="kills">0</span>
+                </div>
+                <div class="hud-item">
+                    <strong>Ammo:</strong> <span id="ammo">30 / 30</span>
+                </div>
+                <div class="hud-item">
+                    <strong>Score:</strong> <span id="score">0</span>
+                </div>
+            </div>
+            
+            <div id="difficulty-badge">EASY</div>
+            
+            <div id="dash-cooldown" style="display: none;">
+                <div>DASH READY</div>
+                <div id="dash-bar">
+                    <div id="dash-fill"></div>
+                </div>
+            </div>
+            
+            <div id="tutorial-overlay">
+                <h3>Tutorial</h3>
+                <p id="tutorial-text">Welcome, Hunter!</p>
+                <button class="btn" id="tutorial-next" style="padding: 10px 30px; font-size: 18px;">Next</button>
+            </div>
+            
+            <div id="wave-info"></div>
+            <div id="crosshair"></div>
+            
+            <div id="start-screen" style="display: none;">
+                <h1>🧛 VAMPIRE HUNTER 🧛</h1>
+                <p>The blood moon rises. Hordes of vampires emerge from the darkness. As humanity's last hope, you must survive wave after wave of the undead menace. Lock and load, hunter!</p>
+                <div class="menu-buttons">
+                    <button class="btn tutorial-btn-menu" id="tutorial-btn">📚 Tutorial</button>
+                    <div class="difficulty-buttons">
+                        <button class="btn difficulty-btn" id="easy-btn" style="background: linear-gradient(135deg, #4CAF50, #2E7D32);">😊 Easy</button>
+                        <button class="btn difficulty-btn" id="normal-btn" style="background: linear-gradient(135deg, #FF9800, #E65100);">⚔️ Normal</button>
+                        <button class="btn difficulty-btn" id="hard-btn" style="background: linear-gradient(135deg, #9C27B0, #4A148C);">💀 Hard</button>
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="desktop-only"><strong>WASD</strong> - Move</div>
+                    <div class="desktop-only"><strong>Mouse</strong> - Aim</div>
+                    <div class="desktop-only"><strong>Click</strong> - Shoot</div>
+                    <div class="desktop-only"><strong>SPACE</strong> - Dash (avoid enemies!)</div>
+                    <div class="mobile-only"><strong>Joystick</strong> - Move</div>
+                    <div class="mobile-only"><strong>Tap Screen</strong> - Shoot</div>
+                    <div class="mobile-only"><strong>Dash Button</strong> - Dash (avoid enemies!)</div>
+                </div>
+            </div>
+            
+            <div id="game-over">
+                <h2>GAME OVER</h2>
+                <div id="final-stats">
+                    <div>Difficulty: <span id="final-difficulty">EASY</span></div>
+                    <div>Wave Reached: <span id="final-wave">0</span></div>
+                    <div>Vampires Slain: <span id="final-kills">0</span></div>
+                    <div>Final Score: <span id="final-score">0</span></div>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn" id="play-again-btn">🔄 Play Again</button>
+                    <button class="btn" id="restart-btn" style="background: linear-gradient(135deg, #555, #333);">📋 Main Menu</button>
+                </div>
+            </div>
+            
+            <div id="upgrade-screen">
+                <h2>⚡ LEVEL UP! ⚡</h2>
+                <p>Choose an upgrade:</p>
+                <div id="upgrade-options"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mute Button -->
+    <div id="mute-btn" title="Toggle Sound">🔊</div>
+    
+    <!-- Desktop WASD Controls Indicator -->
+    <div id="desktop-wasd-controls">
+        <div class="wasd-container">
+            <div class="wasd-main">
+                <div class="wasd-row"><div class="wasd-key" data-key="KeyW"><span>W</span></div></div>
+                <div class="wasd-row">
+                    <div class="wasd-key" data-key="KeyA"><span>A</span></div>
+                    <div class="wasd-key" data-key="KeyS"><span>S</span></div>
+                    <div class="wasd-key" data-key="KeyD"><span>D</span></div>
+                </div>
+            </div>
+            <div class="wasd-vertical">
+                <div class="wasd-key spacebar-key" data-key="Space">SPACE</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <div id="joystick-container">
+            <div id="joystick-base"></div>
+            <div id="joystick-stick"></div>
+        </div>
+        <div id="mobile-dash">DASH</div>
+    </div>
+
+    <script>
+        // Mobile Joystick Controls
+        class MobileControls {
+            constructor() {
+                this.joystickX = 0;
+                this.joystickY = 0;
+                this.isActive = false;
+                this.touchId = null;
+                
+                this.setupJoystick();
+                this.setupDashButton();
+                
+                // Make controls globally accessible
+                window.mobileControls = this;
+            }
+            
+            setupJoystick() {
+                const container = document.getElementById('joystick-container');
+                const stick = document.getElementById('joystick-stick');
+                
+                if (!container || !stick) return;
+                
+                const maxDistance = 35; // Maximum distance stick can move from center
+                
+                const handleStart = (e) => {
+                    this.isActive = true;
+                    stick.classList.add('active');
+                    
+                    // Store touch ID for multi-touch support
+                    if (e.touches && e.touches.length > 0) {
+                        this.touchId = e.touches[0].identifier;
+                    }
+                };
+                
+                const handleMove = (e) => {
+                    if (!this.isActive) return;
+                    
+                    e.preventDefault();
+                    
+                    // Get touch point
+                    let touch;
+                    if (e.touches) {
+                        // Find our specific touch
+                        for (let i = 0; i < e.touches.length; i++) {
+                            if (e.touches[i].identifier === this.touchId) {
+                                touch = e.touches[i];
+                                break;
+                            }
+                        }
+                        if (!touch) return;
+                    } else {
+                        touch = e;
+                    }
+                    
+                    const rect = container.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    let deltaX = touch.clientX - centerX;
+                    let deltaY = touch.clientY - centerY;
+                    
+                    // Calculate distance and angle
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    
+                    // Limit stick movement
+                    if (distance > maxDistance) {
+                        const angle = Math.atan2(deltaY, deltaX);
+                        deltaX = Math.cos(angle) * maxDistance;
+                        deltaY = Math.sin(angle) * maxDistance;
+                    }
+                    
+                    // Update stick position
+                    stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                    
+                    // Normalize values to -1 to 1 range
+                    this.joystickX = deltaX / maxDistance;
+                    this.joystickY = deltaY / maxDistance;
+                };
+                
+                const handleEnd = (e) => {
+                    // Check if this is our touch ending
+                    if (e.changedTouches) {
+                        let isOurTouch = false;
+                        for (let i = 0; i < e.changedTouches.length; i++) {
+                            if (e.changedTouches[i].identifier === this.touchId) {
+                                isOurTouch = true;
+                                break;
+                            }
+                        }
+                        if (!isOurTouch) return;
+                    }
+                    
+                    this.isActive = false;
+                    this.joystickX = 0;
+                    this.joystickY = 0;
+                    this.touchId = null;
+                    stick.classList.remove('active');
+                    stick.style.transform = 'translate(-50%, -50%)';
+                };
+                
+                // Touch events
+                container.addEventListener('touchstart', handleStart, { passive: false });
+                document.addEventListener('touchmove', handleMove, { passive: false });
+                document.addEventListener('touchend', handleEnd);
+                document.addEventListener('touchcancel', handleEnd);
+                
+                // Mouse events for testing on desktop
+                container.addEventListener('mousedown', handleStart);
+                document.addEventListener('mousemove', handleMove);
+                document.addEventListener('mouseup', handleEnd);
+            }
+            
+            setupDashButton() {
+                const dashButton = document.getElementById('mobile-dash');
+                
+                if (!dashButton) return;
+                
+                const handleDash = () => {
+                    if (window.performDash && window.performDash()) {
+                        dashButton.classList.add('active');
+                        setTimeout(() => {
+                            dashButton.classList.remove('active');
+                        }, 200);
+                    }
+                };
+                
+                // Touch events
+                dashButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleDash();
+                });
+                
+                // Mouse events for testing
+                dashButton.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    handleDash();
+                });
+            }
+            
+            // Get current input state
+            getInput() {
+                return {
+                    x: this.joystickX,
+                    y: this.joystickY,
+                    // Legacy support for old input method
+                    left: this.joystickX < -0.3,
+                    right: this.joystickX > 0.3,
+                    up: this.joystickY < -0.3,
+                    down: this.joystickY > 0.3
+                };
+            }
+        }
+        
+        // Initialize mobile controls when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new MobileControls();
+        });
+    </script>
+    
+    <script type="module" src="game.js"></script>
+</body>
+</html>
