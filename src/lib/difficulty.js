@@ -1,0 +1,51 @@
+// Difficulty configurations
+export const DIFFICULTY = {
+    tutorial: {
+        playerHealth: 200,
+        playerSpeed: 6,
+        playerDamage: 100,
+        enemyHealth: 50,
+        enemySpeed: 0.5,
+        enemyDamage: 5,
+        enemiesPerWave: 2,
+        fireRate: 200,
+        dashCooldown: 2000,
+        scoreMultiplier: 0
+    },
+    easy: {
+        playerHealth: 150,
+        playerSpeed: 6,
+        playerDamage: 75,
+        enemyHealth: 75,
+        enemySpeed: 0.8,
+        enemyDamage: 10,
+        enemiesPerWave: 3,
+        fireRate: 250,
+        dashCooldown: 3000,
+        scoreMultiplier: 1
+    },
+    normal: {
+        playerHealth: 100,
+        playerSpeed: 5,
+        playerDamage: 50,
+        enemyHealth: 100,
+        enemySpeed: 1,
+        enemyDamage: 15,
+        enemiesPerWave: 5,
+        fireRate: 300,
+        dashCooldown: 4000,
+        scoreMultiplier: 2
+    },
+    hard: {
+        playerHealth: 75,
+        playerSpeed: 5,
+        playerDamage: 40,
+        enemyHealth: 150,
+        enemySpeed: 1.2,
+        enemyDamage: 20,
+        enemiesPerWave: 7,
+        fireRate: 350,
+        dashCooldown: 5000,
+        scoreMultiplier: 5
+    }
+};
