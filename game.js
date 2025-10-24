@@ -65,6 +65,9 @@ const player = {
     maxDashCooldown: 4000,
     dashDuration: 200,
     dashSpeed: 15,
+    dashEnergy: 100, // Energy for dashing (0-100)
+    maxDashEnergy: 100,
+    dashEnergyRegen: 0.5, // Energy regen per frame
     weapon: {
         ammo: 999,
         maxAmmo: 999,
@@ -91,6 +94,41 @@ const mouse = {
 // Cursor lock state
 let isCursorLocked = false;
 let cursorLockRequested = false;
+
+// Cursor lock functions
+function requestCursorLock() {
+    if (!isCursorLocked && (game.state === 'playing' || game.state === 'tutorial')) {
+        cursorLockRequested = true;
+        canvas.requestPointerLock().catch(err => {
+            console.log('Cursor lock failed:', err);
+            cursorLockRequested = false;
+        });
+    }
+}
+
+function exitCursorLock() {
+    if (isCursorLocked) {
+        document.exitPointerLock();
+    }
+}
+
+// Handle cursor lock state changes
+document.addEventListener('pointerlockchange', () => {
+    isCursorLocked = (document.pointerLockElement === canvas);
+    cursorLockRequested = false;
+
+    if (isCursorLocked) {
+        console.log('Cursor locked to game');
+    } else {
+        console.log('Cursor unlocked from game');
+    }
+});
+
+document.addEventListener('pointerlockerror', () => {
+    console.log('Cursor lock error');
+    cursorLockRequested = false;
+    isCursorLocked = false;
+});
 
 // Game objects
 const bullets = [];
@@ -219,18 +257,23 @@ function reload() {
 function updateHUD() {
     const healthPercent = Math.max(0, Math.min(100, (player.health / player.maxHealth) * 100));
     document.getElementById('health-fill').style.width = `${healthPercent}%`;
-    document.getElementById('health-text').textContent = 
+    document.getElementById('health-text').textContent =
         `${Math.max(0, Math.floor(player.health))} / ${player.maxHealth}`;
     document.getElementById('wave').textContent = game.wave;
     document.getElementById('enemies').textContent = enemies.length;
     document.getElementById('kills').textContent = game.kills;
     document.getElementById('ammo').textContent = '∞';
     document.getElementById('score').textContent = game.score;
-    
+
+    // Update energy bar
+    const energyPercent = Math.max(0, Math.min(100, (player.dashEnergy / player.maxDashEnergy) * 100));
+    document.getElementById('energy-fill-bar').style.width = `${energyPercent}%`;
+    document.getElementById('energy-text').textContent = Math.floor(player.dashEnergy);
+
     // Update dash cooldown (inverted - full when ready, empty when on cooldown)
     const dashPercent = Math.max(0, Math.min(100, 100 - (player.dashCooldown / player.maxDashCooldown * 100)));
     document.getElementById('dash-fill').style.width = `${dashPercent}%`;
-    
+
     // Update dash text
     const dashText = player.dashCooldown <= 0 ? 'DASH READY' : `COOLDOWN: ${Math.ceil(player.dashCooldown / 1000)}s`;
     document.querySelector('#dash-cooldown > div').textContent = dashText;
@@ -243,23 +286,25 @@ if (!window.wasdKeys) {
 
 // Dash function that can be called from keyboard or mobile
 function performDash() {
-    if ((game.state === 'playing' || game.state === 'tutorial') && 
-        player.dashCooldown <= 0 && !player.isDashing) {
+    if ((game.state === 'playing' || game.state === 'tutorial') &&
+        player.dashEnergy >= 50 && !player.isDashing) { // Need at least 50% energy to dash
         player.isDashing = true;
+        player.dashEnergy = Math.max(0, player.dashEnergy - 50); // Consume 50 energy
         player.dashCooldown = player.maxDashCooldown;
-        
+
         // Play dash sound
         soundManager.play('dash');
-        
+
         // Dash particles
         for (let i = 0; i < 20; i++) {
             particles.push(new Particle(player.x, player.y, '#4a90e2'));
         }
-        
+
         setTimeout(() => {
             player.isDashing = false;
         }, player.dashDuration);
-        
+
+        updateHUD();
         return true;
     }
     return false;
@@ -273,10 +318,27 @@ window.addEventListener('keydown', (e) => {
     // Store both original and lowercase to handle all cases
     keys[e.key] = true;
     keys[e.key.toLowerCase()] = true;
-    
+
     // Track for WASD visual feedback
     window.wasdKeys.add(e.code);
-    
+
+    // Cursor lock/unlock (Ctrl+L)
+    if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        if (isCursorLocked) {
+            exitCursorLock();
+        } else {
+            requestCursorLock();
+        }
+        return;
+    }
+
+    // Escape to unlock cursor
+    if (e.key === 'Escape' && isCursorLocked) {
+        exitCursorLock();
+        return;
+    }
+
     // Dash
     if (e.key === ' ' || e.code === 'Space') {
         if (performDash()) {
@@ -294,13 +356,30 @@ window.addEventListener('keyup', (e) => {
 });
 
 window.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
-    
-    const crosshair = document.getElementById('crosshair');
-    crosshair.style.left = e.clientX + 'px';
-    crosshair.style.top = e.clientY + 'px';
+    if (isCursorLocked) {
+        // When cursor is locked, use movement deltas
+        mouse.x += e.movementX;
+        mouse.y += e.movementY;
+
+        // Keep mouse position within canvas bounds
+        mouse.x = Math.max(0, Math.min(canvas.width, mouse.x));
+        mouse.y = Math.max(0, Math.min(canvas.height, mouse.y));
+
+        // Update crosshair position relative to canvas
+        const rect = canvas.getBoundingClientRect();
+        const crosshair = document.getElementById('crosshair');
+        crosshair.style.left = (rect.left + mouse.x) + 'px';
+        crosshair.style.top = (rect.top + mouse.y) + 'px';
+    } else {
+        // Normal mouse tracking when cursor is not locked
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+
+        const crosshair = document.getElementById('crosshair');
+        crosshair.style.left = e.clientX + 'px';
+        crosshair.style.top = e.clientY + 'px';
+    }
 });
 
 window.addEventListener('mousedown', () => {
@@ -390,11 +469,17 @@ function updateWASDHighlighting() {
 // Game loop
 function update() {
     if (game.state !== 'playing' && game.state !== 'tutorial') return;
-    
+
     // Update dash cooldown
     if (player.dashCooldown > 0) {
         player.dashCooldown = Math.max(0, player.dashCooldown - 16); // ~60fps
         updateHUD(); // Update dash display
+    }
+
+    // Regenerate dash energy
+    if (player.dashEnergy < player.maxDashEnergy) {
+        player.dashEnergy = Math.min(player.maxDashEnergy, player.dashEnergy + player.dashEnergyRegen);
+        updateHUD(); // Update energy display
     }
     
     // Get mobile input state
@@ -641,7 +726,7 @@ function initGame() {
     game.waitingForNextWave = false;
     game.expectedEnemies = 0;
     game.spawnedEnemies = 0;
-    
+
     // Reset player
     const diff = DIFFICULTY[game.difficulty];
     player.health = diff.playerHealth;
@@ -653,19 +738,23 @@ function initGame() {
     player.weapon.piercing = 0;
     player.dashCooldown = 0;
     player.isDashing = false;
+    player.dashEnergy = player.maxDashEnergy; // Reset energy to full
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
-    
+
     // Clear arrays
     bullets.length = 0;
     enemies.length = 0;
     particles.length = 0;
     bloodSplatters.length = 0;
     floatingTexts.length = 0;
-    
+
+    // Show energy bar
+    document.getElementById('energy-bar').style.display = 'block';
+
     // Update HUD
     updateHUD();
-    
+
     // Start first wave
     spawnWave();
 }
@@ -674,8 +763,20 @@ function initGame() {
 function draw() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     if (game.state === 'playing' || game.state === 'tutorial') {
+        // Draw aim line (faint line from player to mouse)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
         // Draw player
         if (images.player.complete) {
             ctx.save();
@@ -690,19 +791,19 @@ function draw() {
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fill();
         }
-        
+
         // Draw bullets
         bullets.forEach(bullet => bullet.draw(ctx));
-        
+
         // Draw enemies
         enemies.forEach(enemy => enemy.draw(ctx));
-        
+
         // Draw particles
         particles.forEach(particle => particle.draw(ctx));
-        
+
         // Draw blood splatters
         bloodSplatters.forEach(splatter => splatter.draw(ctx));
-        
+
         // Draw floating texts
         floatingTexts.forEach(text => text.draw(ctx));
     }

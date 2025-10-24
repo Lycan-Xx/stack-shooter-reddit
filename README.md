@@ -13,6 +13,9 @@ A thrilling top-down shooter game where you battle hordes of vampires in a dark,
 - **Sound Effects & Music**: Immersive audio experience
 - **Mobile Support**: Touch controls for mobile devices
 - **Desktop Controls**: WASD movement with mouse aiming
+- **Cursor Locking**: Lock cursor to game viewport for immersive gameplay
+- **Aim Assistance**: Visual aim line shows shooting direction
+- **Energy System**: Dash ability consumes and regenerates energy
 - **Particle Effects**: Blood splatters, muzzle flashes, and visual feedback
 - **Responsive Design**: Works on desktop and mobile devices
 
@@ -58,9 +61,11 @@ Survive as long as possible against waves of vampires. Kill enemies to earn poin
 
 #### Desktop Controls
 - **WASD** or **Arrow Keys** - Move your character
-- **Mouse** - Aim your weapon
+- **Mouse** - Aim your weapon (aim line shows direction)
 - **Left Click** - Shoot bullets
-- **Spacebar** - Dash (temporary invincibility)
+- **Spacebar** - Dash (consumes energy, avoid enemies!)
+- **Ctrl+L** - Lock/unlock cursor to game viewport
+- **Escape** - Unlock cursor (when locked)
 - **M** (top-right corner) - Toggle sound on/off
 
 #### Mobile Controls
