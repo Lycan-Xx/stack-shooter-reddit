@@ -10,14 +10,18 @@ export default function Controls({ performDash, wasdKeys }) {
   useEffect(() => {
     const joystickContainer = joystickRef.current;
     const stick = stickRef.current;
-    
+
     if (!joystickContainer || !stick) return;
 
     const handleTouchStart = (e) => {
-      const touch = Array.from(e.changedTouches).find(t => {
+      const touch = Array.from(e.changedTouches).find((t) => {
         const rect = joystickContainer.getBoundingClientRect();
-        return t.clientX >= rect.left && t.clientX <= rect.right &&
-               t.clientY >= rect.top && t.clientY <= rect.bottom;
+        return (
+          t.clientX >= rect.left &&
+          t.clientX <= rect.right &&
+          t.clientY >= rect.top &&
+          t.clientY <= rect.bottom
+        );
       });
 
       if (touch) {
@@ -31,8 +35,8 @@ export default function Controls({ performDash, wasdKeys }) {
 
     const handleTouchMove = (e) => {
       if (!joystickActive.current) return;
-      
-      const touch = Array.from(e.changedTouches).find(t => t.identifier === joystickId.current);
+
+      const touch = Array.from(e.changedTouches).find((t) => t.identifier === joystickId.current);
       if (touch) {
         e.preventDefault();
         updateJoystick(touch);
@@ -40,14 +44,14 @@ export default function Controls({ performDash, wasdKeys }) {
     };
 
     const handleTouchEnd = (e) => {
-      const touch = Array.from(e.changedTouches).find(t => t.identifier === joystickId.current);
+      const touch = Array.from(e.changedTouches).find((t) => t.identifier === joystickId.current);
       if (touch) {
         e.preventDefault();
         joystickActive.current = false;
         joystickId.current = null;
         stick.classList.remove('active');
         stick.style.transform = 'translate(-50%, -50%)';
-        
+
         window.joystickInput = { x: 0, y: 0 };
       }
     };
@@ -56,23 +60,23 @@ export default function Controls({ performDash, wasdKeys }) {
       const rect = joystickContainer.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      
+
       let deltaX = touch.clientX - centerX;
       let deltaY = touch.clientY - centerY;
-      
+
       const maxDistance = 35;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
+
       if (distance > maxDistance) {
         deltaX = (deltaX / distance) * maxDistance;
         deltaY = (deltaY / distance) * maxDistance;
       }
-      
+
       stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
-      
+
       window.joystickInput = {
         x: deltaX / maxDistance,
-        y: deltaY / maxDistance
+        y: deltaY / maxDistance,
       };
     };
 
@@ -102,16 +106,41 @@ export default function Controls({ performDash, wasdKeys }) {
         <div className="wasd-container">
           <div className="wasd-main">
             <div className="wasd-row">
-              <div className={`wasd-key ${wasdKeys.has('KeyW') || wasdKeys.has('ArrowUp') ? 'active' : ''}`} data-key="KeyW">W</div>
+              <div
+                className={`wasd-key ${wasdKeys.has('KeyW') || wasdKeys.has('ArrowUp') ? 'active' : ''}`}
+                data-key="KeyW"
+              >
+                W
+              </div>
             </div>
             <div className="wasd-row">
-              <div className={`wasd-key ${wasdKeys.has('KeyA') || wasdKeys.has('ArrowLeft') ? 'active' : ''}`} data-key="KeyA">A</div>
-              <div className={`wasd-key ${wasdKeys.has('KeyS') || wasdKeys.has('ArrowDown') ? 'active' : ''}`} data-key="KeyS">S</div>
-              <div className={`wasd-key ${wasdKeys.has('KeyD') || wasdKeys.has('ArrowRight') ? 'active' : ''}`} data-key="KeyD">D</div>
+              <div
+                className={`wasd-key ${wasdKeys.has('KeyA') || wasdKeys.has('ArrowLeft') ? 'active' : ''}`}
+                data-key="KeyA"
+              >
+                A
+              </div>
+              <div
+                className={`wasd-key ${wasdKeys.has('KeyS') || wasdKeys.has('ArrowDown') ? 'active' : ''}`}
+                data-key="KeyS"
+              >
+                S
+              </div>
+              <div
+                className={`wasd-key ${wasdKeys.has('KeyD') || wasdKeys.has('ArrowRight') ? 'active' : ''}`}
+                data-key="KeyD"
+              >
+                D
+              </div>
             </div>
           </div>
           <div className="wasd-vertical">
-            <div className={`wasd-key spacebar-key ${wasdKeys.has('Space') ? 'active' : ''}`} data-key="Space">SPACE</div>
+            <div
+              className={`wasd-key spacebar-key ${wasdKeys.has('Space') ? 'active' : ''}`}
+              data-key="Space"
+            >
+              SPACE
+            </div>
           </div>
         </div>
       </div>
@@ -122,7 +151,9 @@ export default function Controls({ performDash, wasdKeys }) {
           <div id="joystick-base"></div>
           <div id="joystick-stick" ref={stickRef}></div>
         </div>
-        <button id="mobile-dash" onClick={handleDashClick}>DASH</button>
+        <button id="mobile-dash" onClick={handleDashClick}>
+          DASH
+        </button>
       </div>
     </>
   );

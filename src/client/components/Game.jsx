@@ -12,7 +12,7 @@ import './Game.css';
 
 export default function Game() {
   const canvasRef = useRef(null);
-  
+
   const {
     gameState,
     hudData,
@@ -25,13 +25,13 @@ export default function Game() {
     continTutorial,
     restartGame,
     selectUpgrade,
-    performDash
+    performDash,
   } = useGameLoop(canvasRef);
 
   return (
     <div id="game-container">
       <canvas ref={canvasRef} id="game-canvas"></canvas>
-      
+
       <div id="ui-overlay">
         {(gameState === 'playing' || gameState === 'tutorial') && (
           <>
@@ -39,18 +39,15 @@ export default function Game() {
             <div id="difficulty-badge">{difficultyBadge}</div>
           </>
         )}
-        
+
         <div id="wave-info"></div>
-        
+
         {gameState === 'start' && (
-          <StartScreen 
-            onStartGame={startGame}
-            onStartTutorial={startTutorialMode}
-          />
+          <StartScreen onStartGame={startGame} onStartTutorial={startTutorialMode} />
         )}
-        
+
         {gameState === 'gameOver' && (
-          <GameOver 
+          <GameOver
             wave={hudData.wave}
             kills={hudData.kills}
             score={hudData.score}
@@ -58,26 +55,20 @@ export default function Game() {
             onMainMenu={restartGame}
           />
         )}
-        
+
         {gameState === 'upgrade' && (
-          <UpgradeScreen 
-            upgrades={upgradeOptions}
-            onSelectUpgrade={selectUpgrade}
-          />
+          <UpgradeScreen upgrades={upgradeOptions} onSelectUpgrade={selectUpgrade} />
         )}
-        
+
         {gameState === 'tutorial' && tutorialText && (
-          <TutorialOverlay 
-            text={tutorialText}
-            onContinue={continTutorial}
-          />
+          <TutorialOverlay text={tutorialText} onContinue={continTutorial} />
         )}
       </div>
-      
+
       <div id="crosshair"></div>
-      
+
       <Controls performDash={performDash} wasdKeys={wasdKeys} />
-      
+
       <MuteButton soundManager={soundManager} />
     </div>
   );

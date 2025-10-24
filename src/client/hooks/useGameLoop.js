@@ -17,7 +17,7 @@ export function useGameLoop(canvasRef) {
     dashEnergy: 100,
     maxDashEnergy: 100,
     dashCooldown: 0,
-    maxDashCooldown: 4000
+    maxDashCooldown: 4000,
   });
   const [difficulty, setDifficulty] = useState('normal');
   const [difficultyBadge, setDifficultyBadge] = useState('😐 NORMAL MODE');
@@ -37,7 +37,7 @@ export function useGameLoop(canvasRef) {
     waitingForNextWave: false,
     expectedEnemies: 0,
     spawnedEnemies: 0,
-    isFirstGame: true
+    isFirstGame: true,
   });
 
   const playerRef = useRef({
@@ -66,9 +66,9 @@ export function useGameLoop(canvasRef) {
       reloadTime: 0,
       lastShot: 0,
       isReloading: false,
-      piercing: 0
+      piercing: 0,
     },
-    upgrades: {}
+    upgrades: {},
   });
 
   const mouseRef = useRef({ x: 0, y: 0, down: false });
@@ -81,7 +81,7 @@ export function useGameLoop(canvasRef) {
   const imagesRef = useRef({
     vampire: new Image(),
     player: new Image(),
-    heart: new Image()
+    heart: new Image(),
   });
   const cursorLockRef = useRef({ locked: false, requested: false });
 
@@ -98,7 +98,7 @@ export function useGameLoop(canvasRef) {
   const updateHUD = () => {
     const player = playerRef.current;
     const game = gameRef.current;
-    
+
     setHudData({
       health: player.health,
       maxHealth: player.maxHealth,
@@ -109,7 +109,7 @@ export function useGameLoop(canvasRef) {
       dashEnergy: player.dashEnergy,
       maxDashEnergy: player.maxDashEnergy,
       dashCooldown: player.dashCooldown,
-      maxDashCooldown: player.maxDashCooldown
+      maxDashCooldown: player.maxDashCooldown,
     });
   };
 
@@ -139,7 +139,8 @@ export function useGameLoop(canvasRef) {
     game.waitingForNextWave = false;
 
     const diff = DIFFICULTY[game.difficulty];
-    const baseEnemies = game.state === 'tutorial' && game.tutorialStep < 5 ? 1 : diff.enemiesPerWave;
+    const baseEnemies =
+      game.state === 'tutorial' && game.tutorialStep < 5 ? 1 : diff.enemiesPerWave;
     const numEnemies = baseEnemies + Math.floor((game.wave - 1) * 0.5);
 
     game.expectedEnemies = numEnemies;
@@ -154,7 +155,7 @@ export function useGameLoop(canvasRef) {
         const side = Math.floor(Math.random() * 4);
         let x, y;
 
-        switch(side) {
+        switch (side) {
           case 0:
             x = Math.random() * canvas.width;
             y = -50;
@@ -173,7 +174,14 @@ export function useGameLoop(canvasRef) {
             break;
         }
 
-        const vampire = new Vampire(x, y, game.wave, game.difficulty, imagesRef.current, playerRef.current);
+        const vampire = new Vampire(
+          x,
+          y,
+          game.wave,
+          game.difficulty,
+          imagesRef.current,
+          playerRef.current
+        );
         enemiesRef.current.push(vampire);
         game.spawnedEnemies++;
       }, i * 400);
@@ -193,16 +201,16 @@ export function useGameLoop(canvasRef) {
     player.weapon.lastShot = now;
 
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    bulletsRef.current.push(new Bullet(player.x, player.y, angle, game.difficulty, player.weapon.piercing));
+    bulletsRef.current.push(
+      new Bullet(player.x, player.y, angle, game.difficulty, player.weapon.piercing)
+    );
 
     soundManager.play('shoot');
 
     for (let i = 0; i < 5; i++) {
-      particlesRef.current.push(new Particle(
-        player.x + Math.cos(angle) * 20,
-        player.y + Math.sin(angle) * 20,
-        '#ffaa00'
-      ));
+      particlesRef.current.push(
+        new Particle(player.x + Math.cos(angle) * 20, player.y + Math.sin(angle) * 20, '#ffaa00')
+      );
     }
 
     updateHUD();
@@ -211,9 +219,12 @@ export function useGameLoop(canvasRef) {
   const performDash = () => {
     const player = playerRef.current;
     const game = gameRef.current;
-    
-    if ((game.state === 'playing' || game.state === 'tutorial') &&
-        player.dashEnergy >= 50 && !player.isDashing) {
+
+    if (
+      (game.state === 'playing' || game.state === 'tutorial') &&
+      player.dashEnergy >= 50 &&
+      !player.isDashing
+    ) {
       player.isDashing = true;
       player.dashEnergy = Math.max(0, player.dashEnergy - 50);
       player.dashCooldown = player.maxDashCooldown;
@@ -252,7 +263,7 @@ export function useGameLoop(canvasRef) {
   const selectUpgrade = (upgradeKey) => {
     const player = playerRef.current;
     const game = gameRef.current;
-    
+
     applyUpgrade(player, player.upgrades, upgradeKey);
     setGameState('playing');
     game.state = 'playing';
@@ -305,19 +316,19 @@ export function useGameLoop(canvasRef) {
 
   const startGame = (selectedDifficulty) => {
     const game = gameRef.current;
-    
+
     soundManager.play('uiClick');
     game.difficulty = selectedDifficulty;
     setDifficulty(selectedDifficulty);
-    
+
     const badges = {
       easy: '😊 EASY MODE',
       normal: '😐 NORMAL MODE',
       hard: '😰 HARD MODE',
-      nightmare: '💀 NIGHTMARE MODE'
+      nightmare: '💀 NIGHTMARE MODE',
     };
     setDifficultyBadge(badges[selectedDifficulty]);
-    
+
     setGameState('playing');
     game.state = 'playing';
     initGame();
@@ -326,7 +337,7 @@ export function useGameLoop(canvasRef) {
 
   const startTutorialMode = () => {
     const game = gameRef.current;
-    
+
     soundManager.play('uiClick');
     game.state = 'tutorial';
     game.difficulty = 'tutorial';
@@ -334,7 +345,7 @@ export function useGameLoop(canvasRef) {
     setGameState('tutorial');
     setDifficulty('tutorial');
     setDifficultyBadge('📚 TUTORIAL');
-    
+
     initGame();
     soundManager.playMusic();
     setTutorialText(tutorialSteps[0].text);
@@ -343,7 +354,7 @@ export function useGameLoop(canvasRef) {
   const continTutorial = () => {
     const game = gameRef.current;
     const player = playerRef.current;
-    
+
     soundManager.play('uiClick');
     game.tutorialStep++;
 
@@ -385,7 +396,7 @@ export function useGameLoop(canvasRef) {
     const canvas = canvasRef.current;
     const mouse = mouseRef.current;
     const keys = keysRef.current;
-    
+
     if (!canvas || (game.state !== 'playing' && game.state !== 'tutorial')) return;
 
     if (player.dashCooldown > 0) {
@@ -394,16 +405,21 @@ export function useGameLoop(canvasRef) {
     }
 
     if (player.dashEnergy < player.maxDashEnergy) {
-      player.dashEnergy = Math.min(player.maxDashEnergy, player.dashEnergy + player.dashEnergyRegen);
+      player.dashEnergy = Math.min(
+        player.maxDashEnergy,
+        player.dashEnergy + player.dashEnergyRegen
+      );
       updateHUD();
     }
 
     const joystickInput = window.joystickInput || { x: 0, y: 0 };
 
-    let moveX = (keys['d'] || keys['D'] || keys['arrowright'] ? 1 : 0) - 
-                (keys['a'] || keys['A'] || keys['arrowleft'] ? 1 : 0);
-    let moveY = (keys['s'] || keys['S'] || keys['arrowdown'] ? 1 : 0) - 
-                (keys['w'] || keys['W'] || keys['arrowup'] ? 1 : 0);
+    let moveX =
+      (keys['d'] || keys['D'] || keys['arrowright'] ? 1 : 0) -
+      (keys['a'] || keys['A'] || keys['arrowleft'] ? 1 : 0);
+    let moveY =
+      (keys['s'] || keys['S'] || keys['arrowdown'] ? 1 : 0) -
+      (keys['w'] || keys['W'] || keys['arrowup'] ? 1 : 0);
 
     if (Math.abs(joystickInput.x) > 0.2 || Math.abs(joystickInput.y) > 0.2) {
       moveX = joystickInput.x;
@@ -511,9 +527,13 @@ export function useGameLoop(canvasRef) {
     }
 
     const allEnemiesSpawned = game.spawnedEnemies >= game.expectedEnemies;
-    if (enemies.length === 0 && game.waveInProgress && !game.waitingForNextWave && 
-        allEnemiesSpawned && (game.state === 'playing' || game.state === 'tutorial')) {
-
+    if (
+      enemies.length === 0 &&
+      game.waveInProgress &&
+      !game.waitingForNextWave &&
+      allEnemiesSpawned &&
+      (game.state === 'playing' || game.state === 'tutorial')
+    ) {
       game.waveInProgress = false;
       game.waitingForNextWave = true;
 
@@ -525,7 +545,12 @@ export function useGameLoop(canvasRef) {
       if (bonus > 0) {
         game.score += bonus;
         updateHUD();
-        showFloatingText(canvas.width / 2, canvas.height / 2, `Wave Complete! +${bonus}`, '#4CAF50');
+        showFloatingText(
+          canvas.width / 2,
+          canvas.height / 2,
+          `Wave Complete! +${bonus}`,
+          '#4CAF50'
+        );
       } else {
         showFloatingText(canvas.width / 2, canvas.height / 2, `Wave Complete!`, '#4CAF50');
       }
@@ -555,9 +580,9 @@ export function useGameLoop(canvasRef) {
     const player = playerRef.current;
     const canvas = canvasRef.current;
     const mouse = mouseRef.current;
-    
+
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -579,7 +604,13 @@ export function useGameLoop(canvasRef) {
         ctx.save();
         ctx.translate(player.x, player.y);
         ctx.rotate(player.angle);
-        ctx.drawImage(imagesRef.current.player, -player.size/2, -player.size/2, player.size, player.size);
+        ctx.drawImage(
+          imagesRef.current.player,
+          -player.size / 2,
+          -player.size / 2,
+          player.size,
+          player.size
+        );
         ctx.restore();
       } else {
         ctx.fillStyle = '#4a90e2';
@@ -588,17 +619,17 @@ export function useGameLoop(canvasRef) {
         ctx.fill();
       }
 
-      bulletsRef.current.forEach(bullet => bullet.draw(ctx));
-      enemiesRef.current.forEach(enemy => enemy.draw(ctx));
-      particlesRef.current.forEach(particle => particle.draw(ctx));
-      bloodSplattersRef.current.forEach(splatter => splatter.draw(ctx));
-      floatingTextsRef.current.forEach(text => text.draw(ctx));
+      bulletsRef.current.forEach((bullet) => bullet.draw(ctx));
+      enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
+      particlesRef.current.forEach((particle) => particle.draw(ctx));
+      bloodSplattersRef.current.forEach((splatter) => splatter.draw(ctx));
+      floatingTextsRef.current.forEach((text) => text.draw(ctx));
     }
   };
 
   useEffect(() => {
     let animationId;
-    
+
     const gameLoop = () => {
       update();
       draw();
@@ -644,7 +675,7 @@ export function useGameLoop(canvasRef) {
       keysRef.current[e.key] = true;
       keysRef.current[e.key.toLowerCase()] = true;
 
-      setWasdKeys(prev => new Set([...prev, e.code]));
+      setWasdKeys((prev) => new Set([...prev, e.code]));
 
       if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
@@ -664,7 +695,7 @@ export function useGameLoop(canvasRef) {
     const handleKeyUp = (e) => {
       keysRef.current[e.key] = false;
       keysRef.current[e.key.toLowerCase()] = false;
-      setWasdKeys(prev => {
+      setWasdKeys((prev) => {
         const newSet = new Set(prev);
         newSet.delete(e.code);
         return newSet;
@@ -703,10 +734,16 @@ export function useGameLoop(canvasRef) {
         const touchX = touch.clientX;
         const touchY = touch.clientY;
 
-        const isOnJoystick = touchX >= joystickRect.left && touchX <= joystickRect.right &&
-                             touchY >= joystickRect.top && touchY <= joystickRect.bottom;
-        const isOnDash = touchX >= dashRect.left && touchX <= dashRect.right &&
-                        touchY >= dashRect.top && touchY <= dashRect.bottom;
+        const isOnJoystick =
+          touchX >= joystickRect.left &&
+          touchX <= joystickRect.right &&
+          touchY >= joystickRect.top &&
+          touchY <= joystickRect.bottom;
+        const isOnDash =
+          touchX >= dashRect.left &&
+          touchX <= dashRect.right &&
+          touchY >= dashRect.top &&
+          touchY <= dashRect.bottom;
 
         if (!isOnJoystick && !isOnDash) {
           const rect = canvas.getBoundingClientRect();
@@ -764,6 +801,6 @@ export function useGameLoop(canvasRef) {
     continTutorial,
     restartGame,
     selectUpgrade,
-    performDash
+    performDash,
   };
 }
