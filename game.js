@@ -88,6 +88,10 @@ const mouse = {
     down: false
 };
 
+// Cursor lock state
+let isCursorLocked = false;
+let cursorLockRequested = false;
+
 // Game objects
 const bullets = [];
 const enemies = [];
