@@ -112,6 +112,13 @@ export class MultiplayerClient {
     if (!this.isConnected) return;
 
     try {
+      // Tick the server game state
+      await fetch('/api/match/tick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      // Get updated state
       const response = await fetch(`/api/match/state?since=${this.lastSync}`);
       const data = await response.json();
 
@@ -211,8 +218,25 @@ export class MultiplayerClient {
   /**
    * Send shoot action
    */
-  sendShoot(x, y, angle) {
-    this.sendAction('shoot', { x, y, angle });
+  async sendShoot(x, y, angle, damage, piercing) {
+    if (!this.isConnected) return;
+
+    try {
+      await fetch('/api/match/shoot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: this.playerId,
+          x,
+          y,
+          angle,
+          damage,
+          piercing,
+        }),
+      });
+    } catch (error) {
+      console.error('Error sending shoot:', error);
+    }
   }
 
   /**
@@ -234,6 +258,31 @@ export class MultiplayerClient {
    */
   getRemotePlayers() {
     return Array.from(this.remotePlayers.values());
+  }
+
+  /**
+   * Get current match state
+   */
+  getMatchState() {
+    return this.currentMatch;
+  }
+
+  /**
+   * Store current match for access
+   */
+  processMatchUpdate(match) {
+    this.currentMatch = match;
+    
+    // Update remote players
+    this.remotePlayers.clear();
+    
+    for (const player of match.players) {
+      if (player.id !== this.playerId) {
+        this.remotePlayers.set(player.id, player);
+      }
+    }
+
+    return match;
   }
 
   /**

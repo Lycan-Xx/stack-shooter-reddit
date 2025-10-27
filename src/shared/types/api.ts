@@ -28,11 +28,52 @@ export type PlayerState = {
   maxHealth: number;
   isDashing: boolean;
   kills: number;
+  vampireKills: number;
   score: number;
+  isDead: boolean;
+  respawnTime?: number;
+  spawnProtection?: number;
+  powerUps: PowerUp[];
+};
+
+export type PowerUp = {
+  type: 'speed' | 'shield' | 'fireRate' | 'health';
+  duration: number;
+  value: number;
+  startTime: number;
+};
+
+export type Vampire = {
+  id: string;
+  x: number;
+  y: number;
+  health: number;
+  maxHealth: number;
+  speed: number;
+  targetPlayerId?: string;
+};
+
+export type PowerUpDrop = {
+  id: string;
+  type: 'speed' | 'shield' | 'fireRate' | 'health';
+  x: number;
+  y: number;
+  spawnTime: number;
+};
+
+export type Bullet = {
+  id: string;
+  playerId: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  damage: number;
+  piercing: number;
 };
 
 export type GameAction = {
-  type: 'move' | 'shoot' | 'dash' | 'hit' | 'kill';
+  type: 'move' | 'shoot' | 'dash' | 'hit' | 'kill' | 'damage' | 'respawn' | 'powerup';
   playerId: string;
   data: any;
   timestamp: number;
@@ -42,9 +83,14 @@ export type MatchState = {
   matchId: string;
   postId: string;
   players: PlayerState[];
+  vampires: Vampire[];
+  bullets: Bullet[];
+  powerUps: PowerUpDrop[];
   status: 'waiting' | 'countdown' | 'playing' | 'finished';
   startTime?: number;
-  wave: number;
+  matchDuration: number; // 5 minutes in ms
+  timeRemaining: number;
+  winner?: string;
 };
 
 export type JoinMatchResponse = {

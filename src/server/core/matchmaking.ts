@@ -111,8 +111,12 @@ export class MatchmakingService {
       matchId,
       postId,
       players,
+      vampires: [],
+      bullets: [],
+      powerUps: [],
       status: 'waiting',
-      wave: 1,
+      matchDuration: 5 * 60 * 1000,
+      timeRemaining: 5 * 60 * 1000,
     };
 
     await redis.set(matchKey, JSON.stringify(match));
@@ -155,6 +159,11 @@ export class MatchmakingService {
     const match: MatchState = JSON.parse(matchData);
     match.status = 'playing';
     match.startTime = Date.now();
+    match.matchDuration = 5 * 60 * 1000; // 5 minutes
+    match.timeRemaining = match.matchDuration;
+    match.vampires = [];
+    match.bullets = [];
+    match.powerUps = [];
     
     await redis.set(matchKey, JSON.stringify(match));
     return true;

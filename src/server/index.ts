@@ -11,6 +11,7 @@ import {
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { MatchmakingService } from './core/matchmaking';
+import { GameEngine } from './core/gameEngine';
 
 const app = express();
 
@@ -262,6 +263,74 @@ router.post('/api/match/start', async (_req, res): Promise<void> => {
     res.json({ success });
   } catch (error) {
     console.error('Error starting match:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
+router.post('/api/match/tick', async (_req, res): Promise<void> => {
+  const { postId } = context;
+  
+  if (!postId) {
+    res.status(400).json({ success: false });
+    return;
+  }
+
+  try {
+    const match = await MatchmakingService.getMatch(postId);
+    if (!match || match.status !== 'playing') {
+      res.json({ success: false });
+      return;
+    }
+
+    // Create game engine and tick
+    const engine = new GameEngine(match.matchId, postId, match);
+    const updatedState = engine.tick(100); // 100ms tick
+
+    // Save updated state
+    const matchKey = `match:${postId}:current`;
+    await redis.set(matchKey, JSON.stringify(updatedState));
+
+    res.json({ success: true, state: updatedState });
+  } catch (error) {
+    console.error('Error ticking match:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
+router.post('/api/match/shoot', async (req, res): Promise<void> => {
+  const { postId } = context;
+  const { playerId, x, y, angle, damage, piercing } = req.body as {
+    playerId: string;
+    x: number;
+    y: number;
+    angle: number;
+    damage: number;
+    piercing: number;
+  };
+  
+  if (!postId || !playerId) {
+    res.status(400).json({ success: false });
+    return;
+  }
+
+  try {
+    const match = await MatchmakingService.getMatch(postId);
+    if (!match || match.status !== 'playing') {
+      res.json({ success: false });
+      return;
+    }
+
+    // Add bullet to match state
+    const engine = new GameEngine(match.matchId, postId, match);
+    engine.addBullet(playerId, x, y, angle, damage, piercing);
+
+    // Save updated state
+    const matchKey = `match:${postId}:current`;
+    await redis.set(matchKey, JSON.stringify(engine.getState()));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error adding bullet:', error);
     res.status(500).json({ success: false });
   }
 });
