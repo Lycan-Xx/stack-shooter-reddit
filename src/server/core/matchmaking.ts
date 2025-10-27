@@ -1,4 +1,4 @@
-import { redis } from '@devvit/web/server';
+import { redis, reddit } from '@devvit/web/server';
 import { MatchState, PlayerState, GameAction } from '../../shared/types/api';
 
 const MATCH_TIMEOUT = 15000; // 15 seconds
@@ -7,6 +7,27 @@ const MAX_PLAYERS = 12;
 const MESSAGE_RETENTION = 60000; // 1 minute
 
 export class MatchmakingService {
+  /**
+   * Get user's avatar URL from Reddit
+   */
+  private static async getUserAvatarUrl(username: string): Promise<string | undefined> {
+    try {
+      const user = await reddit.getUserByUsername(username);
+      // Try to get Snoo avatar URL using the method
+      if (user) {
+        try {
+          const snooUrl = await user.getSnoovatarUrl();
+          if (snooUrl) return snooUrl;
+        } catch (e) {
+          // Fallback if method doesn't exist
+        }
+      }
+      return undefined;
+    } catch (error) {
+      console.error(`Error fetching avatar for ${username}:`, error);
+      return undefined;
+    }
+  }
   /**
    * Join or create a match for a post
    */
@@ -25,9 +46,13 @@ export class MatchmakingService {
       
       // If match is waiting and not full, allow join
       if (match.status === 'waiting' && match.players.length < MAX_PLAYERS) {
+        // Fetch user's avatar URL
+        const avatarUrl = await this.getUserAvatarUrl(username);
+        
         const newPlayer: PlayerState = {
           id: playerId,
           username,
+          ...(avatarUrl && { avatarUrl }), // Only include if defined
           x: 400,
           y: 300,
           angle: 0,
@@ -97,9 +122,15 @@ export class MatchmakingService {
     const players: PlayerState[] = [];
     for (const playerId of queuedPlayers) {
       const playerData = await redis.hGetAll(`player:${playerId}`);
+      const username = playerData.username || 'Player';
+      
+      // Fetch user's avatar URL
+      const avatarUrl = await this.getUserAvatarUrl(username);
+      
       players.push({
         id: playerId,
-        username: playerData.username || 'Player',
+        username,
+        ...(avatarUrl && { avatarUrl }), // Only include if defined
         x: 400 + Math.random() * 200 - 100,
         y: 300 + Math.random() * 200 - 100,
         angle: 0,

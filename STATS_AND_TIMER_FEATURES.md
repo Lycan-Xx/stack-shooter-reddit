@@ -5,6 +5,7 @@
 ### 1. ✅ Personal Stats in Solo Game Over Screen
 
 **What Changed:**
+
 - Game Over screen now shows your overall stats after dying in solo modes
 - Stats are fetched from the leaderboard API
 - Displays both match stats and lifetime stats
@@ -12,11 +13,13 @@
 **Stats Displayed:**
 
 **This Match:**
+
 - Final Wave
 - Total Kills
 - Final Score
 
 **Your Overall Stats:**
+
 - Total Wins
 - K/D Ratio
 - Best Score
@@ -25,6 +28,7 @@
 - Vampires Slain
 
 **Visual Design:**
+
 - Match stats in red box (game over theme)
 - Overall stats in blue box (info theme)
 - Grid layout for easy reading
@@ -35,6 +39,7 @@
 ### 2. ✅ 5-Minute Match Timer Display
 
 **What Changed:**
+
 - Large prominent timer at top center of screen during multiplayer
 - Color-coded warnings as time runs out
 - Dual display: HUD timer + large center timer
@@ -42,21 +47,25 @@
 **Timer States:**
 
 **Normal (Green) - 5:00 to 1:01**
+
 - Green color (#4caf50)
 - Steady display
 - No animation
 
 **Warning (Orange) - 1:00 to 0:31**
+
 - Orange color (#ff9800)
 - Pulsing animation (1s cycle)
 - Alerts players time is running low
 
 **Critical (Red) - 0:30 to 0:00**
+
 - Red color (#f44336)
 - Fast pulsing animation (0.5s cycle)
 - Urgent warning
 
 **Display Locations:**
+
 1. **HUD (top-left)** - Small timer with icon
 2. **Top Center** - Large prominent timer (multiplayer only)
 
@@ -111,16 +120,19 @@ Colors:
 ### Files Modified
 
 **Solo Stats:**
+
 - `src/client/components/GameOver.jsx` - Added stats fetching and display
 - `src/client/components/GameOver.css` - Added stats styling
 
 **Timer Display:**
+
 - `src/client/components/HUD.jsx` - Added large timer and color logic
 - `src/client/components/HUD.css` - Added timer animations and styling
 
 ### API Integration
 
 **Stats Endpoint:**
+
 ```javascript
 GET /api/stats/player
 
@@ -145,11 +157,11 @@ Response:
 const isLowTime = timeRemaining < 60000; // < 1 minute
 const isCriticalTime = timeRemaining < 30000; // < 30 seconds
 
-const timerClass = isCriticalTime 
-  ? 'timer-critical'  // Red, fast pulse
-  : isLowTime 
-    ? 'timer-warning'  // Orange, slow pulse
-    : 'timer-normal';  // Green, no pulse
+const timerClass = isCriticalTime
+  ? 'timer-critical' // Red, fast pulse
+  : isLowTime
+    ? 'timer-warning' // Orange, slow pulse
+    : 'timer-normal'; // Green, no pulse
 ```
 
 ---
@@ -188,6 +200,7 @@ const timerClass = isCriticalTime
 ## Benefits
 
 ### Solo Stats Display
+
 ✅ Players see their progress
 ✅ Encourages replay to improve stats
 ✅ Shows lifetime achievements
@@ -195,6 +208,7 @@ const timerClass = isCriticalTime
 ✅ No extra clicks needed
 
 ### Timer Display
+
 ✅ Always visible during match
 ✅ Clear time awareness
 ✅ Visual warnings prevent surprises
@@ -206,6 +220,7 @@ const timerClass = isCriticalTime
 ## Testing Checklist
 
 ### Solo Stats
+
 - [ ] Play Easy mode, die, see stats
 - [ ] Play Normal mode, die, see stats
 - [ ] Play Hard mode, die, see stats
@@ -216,6 +231,7 @@ const timerClass = isCriticalTime
 - [ ] Can click "Main Menu" after viewing stats
 
 ### Multiplayer Timer
+
 - [ ] Timer shows at top center in multiplayer
 - [ ] Timer is green at start (5:00)
 - [ ] Timer turns orange at 1:00
@@ -230,11 +246,13 @@ const timerClass = isCriticalTime
 ## Mobile Responsiveness
 
 ### Solo Stats
+
 - Grid changes to single column on mobile
 - Font sizes reduce appropriately
 - Buttons stack vertically if needed
 
 ### Timer
+
 - Large timer reduces from 48px to 32px
 - Label reduces from 12px to 10px
 - Padding adjusts for smaller screens

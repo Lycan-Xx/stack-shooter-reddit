@@ -3,7 +3,7 @@ import { MatchState, PlayerState, Vampire, Bullet, PowerUpDrop, GameAction } fro
 import { LeaderboardService } from './leaderboard';
 
 const MATCH_DURATION = 5 * 60 * 1000; // 5 minutes
-const TICK_RATE = 100; // 100ms per tick
+const TICK_RATE = 50; // 50ms per tick (20 ticks/second for responsive gameplay)
 const VAMPIRE_SPAWN_INTERVAL = 5000; // 5 seconds
 const VAMPIRE_BASE_HEALTH = 100;
 const VAMPIRE_DAMAGE = 25;
@@ -11,7 +11,7 @@ const VAMPIRE_SPEED = 2;
 const BULLET_SPEED = 10;
 const PLAYER_RADIUS = 30;
 const VAMPIRE_RADIUS = 25;
-const BULLET_RADIUS = 5;
+const BULLET_RADIUS = 8; // Increased from 5 to 8 for better hit detection
 const RESPAWN_COOLDOWN = 3000; // 3 seconds
 const SPAWN_PROTECTION_DURATION = 2000; // 2 seconds
 const POWER_UP_DURATION = 10000; // 10 seconds

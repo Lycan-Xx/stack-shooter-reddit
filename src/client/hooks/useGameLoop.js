@@ -101,6 +101,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     vampire: new Image(),
     player: new Image(),
     heart: new Image(),
+    playerAvatar: new Image(), // Current player's Snoo
+    remoteAvatars: new Map(), // Remote players' Snoos
   });
   const cursorLockRef = useRef({ locked: false, requested: false });
 
@@ -113,6 +115,32 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     }).catch((error) => {
       console.error('Error loading images:', error);
     });
+
+    // Load current user's avatar
+    fetch('/api/init')
+      .then(res => res.json())
+      .then(data => {
+        if (data.username) {
+          // Fetch user's Snoo avatar
+          fetch(`/api/user/avatar?username=${data.username}`)
+            .then(res => res.json())
+            .then(avatarData => {
+              if (avatarData.avatarUrl) {
+                const avatarImg = new Image();
+                avatarImg.crossOrigin = 'anonymous';
+                avatarImg.onload = () => {
+                  imagesRef.current.playerAvatar = avatarImg;
+                };
+                avatarImg.onerror = () => {
+                  console.log('Failed to load avatar, using default');
+                };
+                avatarImg.src = avatarData.avatarUrl;
+              }
+            })
+            .catch(err => console.error('Error fetching avatar:', err));
+        }
+      })
+      .catch(err => console.error('Error fetching user info:', err));
 
     // Initialize joystick input
     window.joystickInput = { x: 0, y: 0 };
@@ -575,6 +603,26 @@ export function useGameLoop(canvasRef, multiplayerClient) {
           player.maxHealth = localPlayer.maxHealth;
           player.isDead = localPlayer.isDead;
 
+          // Client-side prediction with server reconciliation
+          // Only reconcile position if difference is significant (> 100px)
+          // This prevents jitter while allowing server corrections
+          const positionDiffX = Math.abs(player.x - localPlayer.x);
+          const positionDiffY = Math.abs(player.y - localPlayer.y);
+          const totalDiff = Math.sqrt(positionDiffX * positionDiffX + positionDiffY * positionDiffY);
+          const significantDiff = 100; // pixels - increased to reduce flickering
+
+          // Only reconcile if we haven't reconciled recently
+          if (!player.lastReconcile) player.lastReconcile = 0;
+          const timeSinceReconcile = now - player.lastReconcile;
+
+          if (totalDiff > significantDiff && timeSinceReconcile > 500) {
+            // Smoothly reconcile to server position
+            player.x += (localPlayer.x - player.x) * 0.2;
+            player.y += (localPlayer.y - player.y) * 0.2;
+            player.lastReconcile = now;
+          }
+          // Otherwise, trust client prediction for responsive movement
+
           // Detect power-up pickup
           const previousPowerUpCount = player.powerUps?.length || 0;
           const newPowerUpCount = localPlayer.powerUps?.length || 0;
@@ -853,24 +901,59 @@ export function useGameLoop(canvasRef, multiplayerClient) {
           );
 
           // Draw remote player
-          if (imagesRef.current.player.complete) {
+          // Load avatar if not already loaded
+          if (remotePlayer.avatarUrl && !imagesRef.current.remoteAvatars.has(remotePlayer.id)) {
+            const avatarImg = new Image();
+            avatarImg.crossOrigin = 'anonymous';
+            avatarImg.onload = () => {
+              imagesRef.current.remoteAvatars.set(remotePlayer.id, avatarImg);
+            };
+            avatarImg.src = remotePlayer.avatarUrl;
+          }
+
+          // Use avatar if available, otherwise use default
+          const remoteImage = imagesRef.current.remoteAvatars.get(remotePlayer.id) || imagesRef.current.player;
+
+          if (remoteImage.complete) {
             ctx.save();
             ctx.translate(interpolated.x, interpolated.y);
             ctx.rotate(interpolated.angle);
             ctx.globalAlpha = 0.8;
+            
+            // Draw avatar (no clip - was causing flickering)
             ctx.drawImage(
-              imagesRef.current.player,
+              remoteImage,
               -player.size / 2,
               -player.size / 2,
               player.size,
               player.size
             );
+            
+            // Draw direction indicator (arrow)
+            ctx.strokeStyle = '#4a90e2';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(player.radius * 0.5, 0);
+            ctx.lineTo(player.radius, 0);
+            ctx.stroke();
+            
             ctx.restore();
           } else {
             ctx.fillStyle = 'rgba(74, 144, 226, 0.8)';
             ctx.beginPath();
             ctx.arc(interpolated.x, interpolated.y, player.radius, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Draw direction indicator
+            ctx.strokeStyle = '#4a90e2';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(interpolated.x, interpolated.y);
+            ctx.lineTo(
+              interpolated.x + Math.cos(interpolated.angle) * player.radius,
+              interpolated.y + Math.sin(interpolated.angle) * player.radius
+            );
+            ctx.stroke();
           }
 
           // Draw username above player
@@ -923,23 +1006,47 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       ctx.restore();
 
       // Draw local player
-      if (imagesRef.current.player.complete) {
+      // Try to use Snoo avatar first, fallback to default sprite
+      const playerImage = imagesRef.current.playerAvatar.complete && imagesRef.current.playerAvatar.src
+        ? imagesRef.current.playerAvatar
+        : imagesRef.current.player;
+
+      if (playerImage.complete) {
         ctx.save();
         ctx.translate(player.x, player.y);
         ctx.rotate(player.angle);
+        
+        // Draw avatar (no clip - was causing flickering)
         ctx.drawImage(
-          imagesRef.current.player,
+          playerImage,
           -player.size / 2,
           -player.size / 2,
           player.size,
           player.size
         );
+        
+        // Draw direction indicator (arrow)
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.radius * 0.5, 0);
+        ctx.lineTo(player.radius, 0);
+        ctx.stroke();
+        
         ctx.restore();
       } else {
         ctx.fillStyle = '#4a90e2';
         ctx.beginPath();
         ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Draw direction indicator
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + Math.cos(player.angle) * player.radius, player.y + Math.sin(player.angle) * player.radius);
+        ctx.stroke();
       }
 
       // Draw username for local player in multiplayer

@@ -283,9 +283,9 @@ router.post('/api/match/tick', async (_req, res): Promise<void> => {
       return;
     }
 
-    // Create game engine and tick
+    // Create game engine and tick with 50ms delta time
     const engine = new GameEngine(match.matchId, postId, match, subredditName || 'unknown');
-    const updatedState = engine.tick(100); // 100ms tick
+    const updatedState = engine.tick(50); // 50ms tick for 20 ticks/second
 
     // Save updated state
     const matchKey = `match:${postId}:current`;
@@ -315,24 +315,48 @@ router.post('/api/match/shoot', async (req, res): Promise<void> => {
   }
 
   try {
-    const match = await MatchmakingService.getMatch(postId);
-    if (!match || match.status !== 'playing') {
-      res.json({ success: false });
+    const matchKey = `match:${postId}:current`;
+    const matchData = await redis.get(matchKey);
+    
+    if (!matchData) {
+      res.json({ success: false, error: 'No match found' });
       return;
     }
 
-    // Add bullet to match state
-    const engine = new GameEngine(match.matchId, postId, match, subredditName || 'unknown');
-    engine.addBullet(playerId, x, y, angle, damage, piercing);
+    const match = JSON.parse(matchData);
+    
+    if (match.status !== 'playing') {
+      res.json({ success: false, error: 'Match not playing' });
+      return;
+    }
 
-    // Save updated state
-    const matchKey = `match:${postId}:current`;
-    await redis.set(matchKey, JSON.stringify(engine.getState()));
+    // Add bullet directly to match state
+    const bullet = {
+      id: `bullet_${Date.now()}_${Math.random()}`,
+      playerId,
+      x,
+      y,
+      vx: Math.cos(angle),
+      vy: Math.sin(angle),
+      damage,
+      piercing,
+    };
 
-    res.json({ success: true });
+    if (!match.bullets) {
+      match.bullets = [];
+    }
+    
+    match.bullets.push(bullet);
+
+    // Save updated state immediately
+    await redis.set(matchKey, JSON.stringify(match));
+
+    console.log(`Bullet added: ${bullet.id}, total bullets: ${match.bullets.length}`);
+    res.json({ success: true, bulletId: bullet.id });
   } catch (error) {
     console.error('Error adding bullet:', error);
-    res.status(500).json({ success: false });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ success: false, error: errorMessage });
   }
 });
 
@@ -416,6 +440,35 @@ router.get('/api/stats/community', async (_req, res): Promise<void> => {
   } catch (error) {
     console.error('Error getting community stats:', error);
     res.status(500).json({ success: false, stats: null });
+  }
+});
+
+// User avatar endpoint
+router.get('/api/user/avatar', async (req, res): Promise<void> => {
+  try {
+    const username = (req.query.username as string) || await reddit.getCurrentUsername();
+    
+    if (!username) {
+      res.status(400).json({ success: false, avatarUrl: null });
+      return;
+    }
+
+    const user = await reddit.getUserByUsername(username);
+    let avatarUrl = null;
+    
+    // Try to get Snoo avatar URL
+    if (user) {
+      try {
+        avatarUrl = await user.getSnoovatarUrl();
+      } catch (e) {
+        console.debug('Could not get Snoo avatar');
+      }
+    }
+    
+    res.json({ success: true, avatarUrl, username });
+  } catch (error) {
+    console.error('Error getting user avatar:', error);
+    res.status(500).json({ success: false, avatarUrl: null });
   }
 });
 

@@ -89,10 +89,10 @@ export class MultiplayerClient {
       clearInterval(this.syncInterval);
     }
 
-    // Poll every 100ms for smooth multiplayer
+    // Poll every 50ms for responsive multiplayer (20 ticks/second)
     this.syncInterval = setInterval(() => {
       this.sync();
-    }, 100);
+    }, 50);
   }
 
   /**

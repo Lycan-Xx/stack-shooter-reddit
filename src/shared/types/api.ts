@@ -21,6 +21,7 @@ export type DecrementResponse = {
 export type PlayerState = {
   id: string;
   username: string;
+  avatarUrl?: string;
   x: number;
   y: number;
   angle: number;

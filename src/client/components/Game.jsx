@@ -12,11 +12,13 @@ import Controls from './Controls';
 import MuteButton from './MuteButton';
 import MatchmakingScreen from './MatchmakingScreen';
 import MatchEndScreen from './MatchEndScreen';
+import StatsModal from './StatsModal';
 import './Game.css';
 
 export default function Game() {
   const canvasRef = useRef(null);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const {
     gameState,
@@ -102,8 +104,14 @@ export default function Game() {
         )}
 
         {isPaused && (gameState === 'playing' || gameState === 'tutorial') && (
-          <PauseMenu onResume={togglePause} onMainMenu={restartGame} />
+          <PauseMenu 
+            onResume={togglePause} 
+            onMainMenu={restartGame}
+            onViewStats={() => setShowStats(true)}
+          />
         )}
+
+        {showStats && <StatsModal onClose={() => setShowStats(false)} />}
 
         {matchState && matchState.status === 'finished' && (
           <MatchEndScreen

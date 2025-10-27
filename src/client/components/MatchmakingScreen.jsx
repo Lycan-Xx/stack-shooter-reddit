@@ -90,7 +90,13 @@ export default function MatchmakingScreen({ onMatchFound, onCancel, multiplayerC
         if (timeLeft <= 0) {
           clearInterval(countdownInterval);
           if (mounted) {
-            onMatchFound();
+            // Start the match on server before transitioning
+            fetch('/api/match/start', { method: 'POST' })
+              .then(() => {
+                console.log('Match started on server');
+                onMatchFound();
+              })
+              .catch(err => console.error('Error starting match:', err));
           }
         }
       };
@@ -111,7 +117,13 @@ export default function MatchmakingScreen({ onMatchFound, onCancel, multiplayerC
         if (timeLeft <= 0) {
           clearInterval(countdownInterval);
           if (mounted) {
-            onMatchFound();
+            // Start the match on server before transitioning
+            fetch('/api/match/start', { method: 'POST' })
+              .then(() => {
+                console.log('Match started on server (fallback)');
+                onMatchFound();
+              })
+              .catch(err => console.error('Error starting match:', err));
           }
         }
       }, 1000);
