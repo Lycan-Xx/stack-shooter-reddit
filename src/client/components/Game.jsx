@@ -11,6 +11,7 @@ import PauseMenu from './PauseMenu';
 import Controls from './Controls';
 import MuteButton from './MuteButton';
 import MatchmakingScreen from './MatchmakingScreen';
+import MatchEndScreen from './MatchEndScreen';
 import './Game.css';
 
 export default function Game() {
@@ -27,6 +28,7 @@ export default function Game() {
     isPaused,
     isMultiplayer,
     remotePlayers,
+    matchState,
     startGame,
     startTutorialMode,
     startMultiplayerGame,
@@ -101,6 +103,15 @@ export default function Game() {
 
         {isPaused && (gameState === 'playing' || gameState === 'tutorial') && (
           <PauseMenu onResume={togglePause} onMainMenu={restartGame} />
+        )}
+
+        {matchState && matchState.status === 'finished' && (
+          <MatchEndScreen
+            winner={matchState.winner}
+            players={matchState.players}
+            onPlayAgain={handleStartMultiplayer}
+            onMainMenu={restartGame}
+          />
         )}
       </div>
 

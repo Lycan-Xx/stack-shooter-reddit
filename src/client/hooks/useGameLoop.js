@@ -105,6 +105,23 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const player = playerRef.current;
     const game = gameRef.current;
 
+    // Get match state if in multiplayer
+    let timeRemaining = 0;
+    let vampireKills = 0;
+    let playerKills = 0;
+
+    if (game.isMultiplayer && multiplayerClient) {
+      const matchState = multiplayerClient.getMatchState();
+      if (matchState) {
+        timeRemaining = matchState.timeRemaining || 0;
+        const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
+        if (localPlayer) {
+          vampireKills = localPlayer.vampireKills || 0;
+          playerKills = localPlayer.kills || 0;
+        }
+      }
+    }
+
     setHudData({
       health: player.health,
       maxHealth: player.maxHealth,
@@ -116,6 +133,10 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       maxDashEnergy: player.maxDashEnergy,
       dashCooldown: player.dashCooldown,
       maxDashCooldown: player.maxDashCooldown,
+      timeRemaining,
+      vampireKills,
+      playerKills,
+      powerUps: player.powerUps || [],
     });
   };
 
@@ -202,14 +223,33 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const game = gameRef.current;
     const now = Date.now();
 
-    if (now - player.weapon.lastShot < player.weapon.fireRate) return;
+    // Check fire rate with power-up bonus
+    const fireRatePowerUp = player.powerUps?.find((p) => p.type === 'fireRate');
+    const fireRate = fireRatePowerUp
+      ? player.weapon.fireRate * fireRatePowerUp.value
+      : player.weapon.fireRate;
+
+    if (now - player.weapon.lastShot < fireRate) return;
 
     player.weapon.lastShot = now;
 
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    bulletsRef.current.push(
-      new Bullet(player.x, player.y, angle, game.difficulty, player.weapon.piercing)
-    );
+
+    // In multiplayer, send to server for validation
+    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+      multiplayerClient.sendShoot(
+        player.x,
+        player.y,
+        angle,
+        player.weapon.damage,
+        player.weapon.piercing
+      );
+    } else {
+      // Solo mode: create bullet client-side
+      bulletsRef.current.push(
+        new Bullet(player.x, player.y, angle, game.difficulty, player.weapon.piercing)
+      );
+    }
 
     soundManager.play('shoot');
 
@@ -217,11 +257,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       particlesRef.current.push(
         new Particle(player.x + Math.cos(angle) * 20, player.y + Math.sin(angle) * 20, '#ffaa00')
       );
-    }
-
-    // Broadcast shoot action in multiplayer
-    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-      multiplayerClient.sendShoot(player.x, player.y, angle);
     }
 
     updateHUD();
@@ -955,6 +990,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     isPaused,
     isMultiplayer,
     remotePlayers,
+    matchState: multiplayerClient?.getMatchState(),
     startGame,
     startTutorialMode,
     startMultiplayerGame,
