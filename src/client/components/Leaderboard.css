@@ -1,0 +1,254 @@
+.leaderboard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.leaderboard-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #ff6b6b;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(255, 107, 107, 0.3);
+}
+
+.leaderboard-modal h2 {
+  color: #ff6b6b;
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-size: 32px;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+.leaderboard-modal h3 {
+  color: #ff6b6b;
+  text-align: center;
+  margin: 20px 0 15px 0;
+  font-size: 24px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 107, 107, 0.2);
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  font-size: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #ff6b6b;
+  color: white;
+  transform: rotate(90deg);
+}
+
+.player-stats-card {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid #ff6b6b;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.stat-value {
+  color: #ff6b6b;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.community-stats {
+  margin-bottom: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.stat-box {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid #ff6b6b;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.stat-box .stat-number {
+  color: #ff6b6b;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-box .stat-label {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.leaderboard-tabs button {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.leaderboard-tabs button:hover {
+  background: rgba(255, 107, 107, 0.2);
+  transform: translateY(-2px);
+}
+
+.leaderboard-tabs button.active {
+  background: #ff6b6b;
+  color: white;
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+}
+
+.leaderboard-table {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.leaderboard-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard-table thead {
+  position: sticky;
+  top: 0;
+  background: #1a1a2e;
+  z-index: 1;
+}
+
+.leaderboard-table th {
+  color: #ff6b6b;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #ff6b6b;
+  font-size: 14px;
+}
+
+.leaderboard-table td {
+  padding: 12px;
+  color: white;
+  border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.leaderboard-table tr:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.leaderboard-table tr.highlight {
+  background: rgba(255, 215, 0, 0.2);
+  border-left: 3px solid gold;
+}
+
+.leaderboard-table .rank {
+  font-weight: bold;
+  font-size: 18px;
+  width: 60px;
+}
+
+.leaderboard-table .username {
+  font-weight: bold;
+}
+
+.leaderboard-table .score {
+  text-align: right;
+  color: #ff6b6b;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.loading, .empty-state {
+  text-align: center;
+  color: #aaa;
+  padding: 40px;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .leaderboard-modal {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .leaderboard-modal h2 {
+    font-size: 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .leaderboard-tabs {
+    flex-direction: column;
+  }
+
+  .leaderboard-tabs button {
+    width: 100%;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+}

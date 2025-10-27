@@ -110,3 +110,47 @@ export type MatchUpdateResponse = {
 export type LeaveMatchResponse = {
   success: boolean;
 };
+
+// Leaderboard Types
+export type PlayerStats = {
+  username: string;
+  totalKills: number;
+  totalDeaths: number;
+  totalWins: number;
+  totalMatches: number;
+  bestScore: number;
+  vampireKills: number;
+  playerKills: number;
+  kdRatio: number;
+  lastPlayed: number;
+};
+
+export type LeaderboardEntry = {
+  rank: number;
+  username: string;
+  score: number;
+  kills?: number;
+  vampireKills?: number;
+};
+
+export type CommunityStats = {
+  subredditName: string;
+  totalVampiresKilled: number;
+  totalMatches: number;
+  totalPlayers: number;
+  weeklyVampires: number;
+  weeklyMatches: number;
+};
+
+export type LeaderboardResponse = {
+  global: LeaderboardEntry[];
+  subreddit: LeaderboardEntry[];
+  daily: LeaderboardEntry[];
+  weekly: LeaderboardEntry[];
+};
+
+export type StatsResponse = {
+  playerStats: PlayerStats | null;
+  communityStats: CommunityStats;
+  playerRank: number;
+};

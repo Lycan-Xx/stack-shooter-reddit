@@ -1,5 +1,6 @@
 import { redis } from '@devvit/web/server';
 import { MatchState, PlayerState, Vampire, Bullet, PowerUpDrop, GameAction } from '../../shared/types/api';
+import { LeaderboardService } from './leaderboard';
 
 const MATCH_DURATION = 5 * 60 * 1000; // 5 minutes
 const TICK_RATE = 100; // 100ms per tick
@@ -19,15 +20,17 @@ const POWER_UP_LIFETIME = 30000; // 30 seconds before despawn
 export class GameEngine {
   private matchId: string;
   private postId: string;
+  private subredditName: string;
   private state: MatchState;
   private lastVampireSpawn: number = 0;
   private vampireIdCounter: number = 0;
   private bulletIdCounter: number = 0;
   private powerUpIdCounter: number = 0;
 
-  constructor(matchId: string, postId: string, initialState: MatchState) {
+  constructor(matchId: string, postId: string, initialState: MatchState, subredditName: string = 'unknown') {
     this.matchId = matchId;
     this.postId = postId;
+    this.subredditName = subredditName;
     this.state = initialState;
   }
 
@@ -43,8 +46,30 @@ export class GameEngine {
     this.state.timeRemaining = Math.max(0, this.state.timeRemaining - deltaTime);
 
     // Check for match end
-    if (this.state.timeRemaining <= 0) {
-      this.endMatch();
+    if (this.state.timeRemaining <= 0 && this.state.status === 'playing') {
+      // Mark as finished immediately to prevent multiple calls
+      this.state.status = 'finished';
+      
+      // Find winner (highest score)
+      let winner: PlayerState | null = null;
+      let highestScore = -1;
+
+      for (const player of this.state.players) {
+        if (player.score > highestScore) {
+          highestScore = player.score;
+          winner = player;
+        }
+      }
+
+      if (winner) {
+        this.state.winner = winner.username;
+      }
+      
+      // Save results asynchronously (don't await to avoid blocking)
+      this.saveMatchResults(winner).catch(err => 
+        console.error('Error saving match results:', err)
+      );
+      
       return this.state;
     }
 
@@ -447,24 +472,24 @@ export class GameEngine {
   }
 
   /**
-   * End the match and determine winner
+   * Save match results to leaderboard
    */
-  private endMatch(): void {
-    this.state.status = 'finished';
-
-    // Find winner (highest score)
-    let winner: PlayerState | null = null;
-    let highestScore = -1;
-
-    for (const player of this.state.players) {
-      if (player.score > highestScore) {
-        highestScore = player.score;
-        winner = player;
+  private async saveMatchResults(winner: PlayerState | null): Promise<void> {
+    try {
+      for (const player of this.state.players) {
+        const won = winner ? player.id === winner.id : false;
+        
+        await LeaderboardService.saveMatchResult(
+          player.username,
+          this.subredditName,
+          player.score,
+          player.kills,
+          player.vampireKills,
+          won
+        );
       }
-    }
-
-    if (winner) {
-      this.state.winner = winner.username;
+    } catch (error) {
+      console.error('Error saving match results to leaderboard:', error);
     }
   }
 

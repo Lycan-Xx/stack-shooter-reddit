@@ -12,6 +12,7 @@ import { redis, reddit, createServer, context, getServerPort } from '@devvit/web
 import { createPost } from './core/post';
 import { MatchmakingService } from './core/matchmaking';
 import { GameEngine } from './core/gameEngine';
+import { LeaderboardService } from './core/leaderboard';
 
 const app = express();
 
@@ -268,7 +269,7 @@ router.post('/api/match/start', async (_req, res): Promise<void> => {
 });
 
 router.post('/api/match/tick', async (_req, res): Promise<void> => {
-  const { postId } = context;
+  const { postId, subredditName } = context;
   
   if (!postId) {
     res.status(400).json({ success: false });
@@ -283,7 +284,7 @@ router.post('/api/match/tick', async (_req, res): Promise<void> => {
     }
 
     // Create game engine and tick
-    const engine = new GameEngine(match.matchId, postId, match);
+    const engine = new GameEngine(match.matchId, postId, match, subredditName || 'unknown');
     const updatedState = engine.tick(100); // 100ms tick
 
     // Save updated state
@@ -298,7 +299,7 @@ router.post('/api/match/tick', async (_req, res): Promise<void> => {
 });
 
 router.post('/api/match/shoot', async (req, res): Promise<void> => {
-  const { postId } = context;
+  const { postId, subredditName } = context;
   const { playerId, x, y, angle, damage, piercing } = req.body as {
     playerId: string;
     x: number;
@@ -321,7 +322,7 @@ router.post('/api/match/shoot', async (req, res): Promise<void> => {
     }
 
     // Add bullet to match state
-    const engine = new GameEngine(match.matchId, postId, match);
+    const engine = new GameEngine(match.matchId, postId, match, subredditName || 'unknown');
     engine.addBullet(playerId, x, y, angle, damage, piercing);
 
     // Save updated state
@@ -332,6 +333,89 @@ router.post('/api/match/shoot', async (req, res): Promise<void> => {
   } catch (error) {
     console.error('Error adding bullet:', error);
     res.status(500).json({ success: false });
+  }
+});
+
+// Leaderboard endpoints
+router.get('/api/leaderboard/global', async (_req, res): Promise<void> => {
+  try {
+    const leaderboard = await LeaderboardService.getGlobalLeaderboard();
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting global leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/leaderboard/subreddit', async (_req, res): Promise<void> => {
+  const { subredditName } = context;
+  
+  if (!subredditName) {
+    res.status(400).json({ success: false, leaderboard: [] });
+    return;
+  }
+
+  try {
+    const leaderboard = await LeaderboardService.getSubredditLeaderboard(subredditName);
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting subreddit leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/leaderboard/daily', async (_req, res): Promise<void> => {
+  try {
+    const leaderboard = await LeaderboardService.getDailyLeaderboard();
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting daily leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/leaderboard/weekly', async (_req, res): Promise<void> => {
+  try {
+    const leaderboard = await LeaderboardService.getWeeklyLeaderboard();
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting weekly leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/stats/player', async (_req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, stats: null });
+      return;
+    }
+
+    const stats = await LeaderboardService.getPlayerStats(username);
+    const rank = await LeaderboardService.getPlayerRank(username);
+    
+    res.json({ success: true, stats, rank });
+  } catch (error) {
+    console.error('Error getting player stats:', error);
+    res.status(500).json({ success: false, stats: null });
+  }
+});
+
+router.get('/api/stats/community', async (_req, res): Promise<void> => {
+  const { subredditName } = context;
+  
+  if (!subredditName) {
+    res.status(400).json({ success: false, stats: null });
+    return;
+  }
+
+  try {
+    const stats = await LeaderboardService.getCommunityStats(subredditName);
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error getting community stats:', error);
+    res.status(500).json({ success: false, stats: null });
   }
 });
 
