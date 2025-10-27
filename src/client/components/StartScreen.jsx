@@ -3,10 +3,10 @@ import './StartScreen.css';
 export default function StartScreen({ onStartGame, onStartTutorial }) {
   return (
     <div id="start-screen">
-      <h1>🧛 Vampire Hunter: Night of the Blood Moon</h1>
+      <h1>🧛 Vampire Siege</h1>
       <p>
-        Battle hordes of vampires in this intense top-down shooter! Survive waves, collect upgrades,
-        and become the ultimate vampire hunter!
+        Defend against endless hordes of vampires in this intense top-down shooter! Survive waves,
+        collect upgrades, and hold your ground against the undead!
       </p>
 
       <div className="menu-buttons">

@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Auto Commit Message Writer",
+  "description": "Automatically generates a natural-toned commit message whenever a new feature, design change, fix, or major update is made to the codebase",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*",
+      "package.json",
+      "devvit.json",
+      "*.config.js",
+      "*.config.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the recent changes made to the codebase and write a commit message in a natural, conversational tone. The commit message should clearly describe what was changed and why, as if you're explaining it to a teammate. Focus on the purpose and impact of the changes rather than just listing files. Keep it concise but informative."
+  }
+}

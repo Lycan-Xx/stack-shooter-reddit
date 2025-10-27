@@ -40,6 +40,8 @@ export function useGameLoop(canvasRef) {
     isFirstGame: true,
   });
 
+  const [isPaused, setIsPaused] = useState(false);
+
   const playerRef = useRef({
     x: 0,
     y: 0,
@@ -388,6 +390,26 @@ export function useGameLoop(canvasRef) {
     soundManager.play('uiClick');
     setGameState('start');
     gameRef.current.state = 'start';
+    setIsPaused(false);
+    gameRef.current.paused = false;
+  };
+
+  const togglePause = () => {
+    const game = gameRef.current;
+    
+    if (game.state !== 'playing' && game.state !== 'tutorial') {
+      return;
+    }
+
+    game.paused = !game.paused;
+    setIsPaused(game.paused);
+    soundManager.play('uiClick');
+
+    if (game.paused) {
+      soundManager.stopMusic();
+    } else {
+      soundManager.playMusic();
+    }
   };
 
   const update = () => {
@@ -397,7 +419,7 @@ export function useGameLoop(canvasRef) {
     const mouse = mouseRef.current;
     const keys = keysRef.current;
 
-    if (!canvas || (game.state !== 'playing' && game.state !== 'tutorial')) return;
+    if (!canvas || (game.state !== 'playing' && game.state !== 'tutorial') || game.paused) return;
 
     if (player.dashCooldown > 0) {
       player.dashCooldown = Math.max(0, player.dashCooldown - 16);
@@ -681,7 +703,9 @@ export function useGameLoop(canvasRef) {
         e.preventDefault();
       }
 
-      if (e.key === 'Escape' && cursorLockRef.current.locked) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        togglePause();
         return;
       }
 
@@ -796,11 +820,13 @@ export function useGameLoop(canvasRef) {
     upgradeOptions,
     tutorialText,
     wasdKeys,
+    isPaused,
     startGame,
     startTutorialMode,
     continTutorial,
     restartGame,
     selectUpgrade,
     performDash,
+    togglePause,
   };
 }

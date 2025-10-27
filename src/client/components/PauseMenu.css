@@ -1,0 +1,88 @@
+#pause-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.pause-content {
+  text-align: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 3px solid #4a90e2;
+  border-radius: 16px;
+  box-shadow: 0 0 30px rgba(74, 144, 226, 0.5);
+}
+
+.pause-content h2 {
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: #fff;
+  text-shadow: 0 0 20px #4a90e2;
+}
+
+.pause-content p {
+  font-size: 18px;
+  color: #aaa;
+  margin-bottom: 30px;
+}
+
+.pause-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.pause-btn {
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid #4a90e2;
+  background: rgba(74, 144, 226, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 200px;
+}
+
+.pause-btn:hover {
+  background: rgba(74, 144, 226, 0.5);
+  transform: scale(1.05);
+}
+
+.pause-btn.secondary {
+  background: rgba(139, 0, 0, 0.2);
+  border-color: #8b0000;
+}
+
+.pause-btn.secondary:hover {
+  background: rgba(139, 0, 0, 0.5);
+}
+
+@media (max-width: 768px) {
+  .pause-content {
+    padding: 30px 20px;
+  }
+
+  .pause-content h2 {
+    font-size: 36px;
+  }
+
+  .pause-content p {
+    font-size: 16px;
+  }
+
+  .pause-btn {
+    font-size: 16px;
+    padding: 12px 30px;
+  }
+}

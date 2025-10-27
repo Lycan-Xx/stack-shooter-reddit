@@ -75,8 +75,8 @@
 
 #difficulty-badge {
   position: absolute;
-  top: 80px;
-  left: 20px;
+  top: 20px;
+  left: 260px;
   padding: 8px 16px;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid #ffaa00;
@@ -84,4 +84,14 @@
   color: #ffaa00;
   font-weight: bold;
   font-size: 14px;
+  z-index: 10;
+}
+
+@media (max-width: 768px) {
+  #difficulty-badge {
+    top: 10px;
+    left: 10px;
+    font-size: 12px;
+    padding: 6px 12px;
+  }
 }

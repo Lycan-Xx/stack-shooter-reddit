@@ -3,7 +3,7 @@ class SoundManager {
   constructor() {
     this.sounds = {};
     // Check localStorage for saved mute preference
-    const savedMute = localStorage.getItem('vampireHunterMuted');
+    const savedMute = localStorage.getItem('vampireSiegeMuted');
     this.enabled = savedMute === null ? true : savedMute === 'false';
     this.volume = 0.3;
     this.musicVolume = 0.2;
@@ -57,13 +57,26 @@ class SoundManager {
     }
   }
 
+  mute() {
+    this.enabled = false;
+    this.stopMusic();
+    localStorage.setItem('vampireSiegeMuted', 'false');
+  }
+
+  unmute() {
+    this.enabled = true;
+    localStorage.setItem('vampireSiegeMuted', 'true');
+  }
+
   toggle() {
     this.enabled = !this.enabled;
     if (!this.enabled) {
       this.stopMusic();
+    } else {
+      this.playMusic();
     }
     // Save preference to localStorage
-    localStorage.setItem('vampireHunterMuted', this.enabled);
+    localStorage.setItem('vampireSiegeMuted', this.enabled);
     return this.enabled;
   }
 }

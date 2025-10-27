@@ -6,6 +6,7 @@ import StartScreen from './StartScreen';
 import GameOver from './GameOver';
 import UpgradeScreen from './UpgradeScreen';
 import TutorialOverlay from './TutorialOverlay';
+import PauseMenu from './PauseMenu';
 import Controls from './Controls';
 import MuteButton from './MuteButton';
 import './Game.css';
@@ -20,12 +21,14 @@ export default function Game() {
     upgradeOptions,
     tutorialText,
     wasdKeys,
+    isPaused,
     startGame,
     startTutorialMode,
     continTutorial,
     restartGame,
     selectUpgrade,
     performDash,
+    togglePause,
   } = useGameLoop(canvasRef);
 
   return (
@@ -62,6 +65,10 @@ export default function Game() {
 
         {gameState === 'tutorial' && tutorialText && (
           <TutorialOverlay text={tutorialText} onContinue={continTutorial} />
+        )}
+
+        {isPaused && (gameState === 'playing' || gameState === 'tutorial') && (
+          <PauseMenu onResume={togglePause} onMainMenu={restartGame} />
         )}
       </div>
 

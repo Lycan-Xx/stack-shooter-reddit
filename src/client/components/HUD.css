@@ -113,3 +113,29 @@
   background: linear-gradient(90deg, #ffaa00 0%, #ffd700 100%);
   transition: width 0.3s;
 }
+
+@media (max-width: 768px) {
+  #hud {
+    top: 50px;
+    left: 10px;
+    font-size: 14px;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  #health-bar {
+    width: 150px;
+    height: 20px;
+  }
+
+  #health-text {
+    line-height: 20px;
+    font-size: 12px;
+  }
+
+  #dash-cooldown,
+  #energy-bar {
+    width: 250px;
+    font-size: 14px;
+  }
+}
