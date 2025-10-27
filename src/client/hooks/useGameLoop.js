@@ -4,6 +4,13 @@ import { Vampire, Bullet, Particle, BloodSplatter, FloatingText } from '../lib/e
 import { tutorialSteps, nextTutorialStep, startTutorial } from '../lib/tutorial.js';
 import { getRandomUpgrades, applyUpgrade } from '../lib/upgrades.js';
 import { soundManager } from '../lib/sound.js';
+import {
+  renderServerBullets,
+  renderServerVampires,
+  renderPowerUps,
+  renderDeathOverlay,
+  renderSpawnProtection,
+} from '../lib/serverEntityRenderer.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -509,6 +516,37 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       // Update remote players list
       const remotePlayers = multiplayerClient.getRemotePlayers();
       setRemotePlayers(remotePlayers);
+
+      // Sync local player state from server
+      const matchState = multiplayerClient.getMatchState();
+      if (matchState) {
+        const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
+
+        if (localPlayer) {
+          // Sync health from server
+          player.health = localPlayer.health;
+          player.maxHealth = localPlayer.maxHealth;
+
+          // Sync power-ups
+          player.powerUps = localPlayer.powerUps || [];
+
+          // Apply speed power-up
+          const speedPowerUp = player.powerUps.find((p) => p.type === 'speed');
+          if (speedPowerUp) {
+            player.speed = 5 * speedPowerUp.value; // Apply speed boost
+          } else {
+            player.speed = 5; // Normal speed
+          }
+
+          // Update HUD with server state
+          updateHUD();
+
+          // Handle death state - disable controls
+          if (localPlayer.isDead) {
+            return; // Skip movement and actions when dead
+          }
+        }
+      }
     }
 
     if (player.dashCooldown > 0) {
@@ -808,8 +846,34 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         ctx.restore();
       }
 
-      bulletsRef.current.forEach((bullet) => bullet.draw(ctx));
-      enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
+      // Draw entities based on mode
+      if (game.isMultiplayer && multiplayerClient) {
+        const matchState = multiplayerClient.getMatchState();
+
+        if (matchState) {
+          // Draw server-managed entities
+          renderServerBullets(ctx, matchState.bullets);
+          renderServerVampires(ctx, matchState.vampires, imagesRef.current.vampire);
+          renderPowerUps(ctx, matchState.powerUps);
+
+          // Check if local player is dead
+          const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
+          if (localPlayer?.isDead && localPlayer.respawnTime) {
+            renderDeathOverlay(ctx, canvas, localPlayer.respawnTime);
+          }
+
+          // Check for spawn protection
+          if (localPlayer?.spawnProtection && localPlayer.spawnProtection > 0) {
+            renderSpawnProtection(ctx, canvas, player);
+          }
+        }
+      } else {
+        // Solo mode: use client-side entities
+        bulletsRef.current.forEach((bullet) => bullet.draw(ctx));
+        enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
+      }
+
+      // Always draw particles and effects
       particlesRef.current.forEach((particle) => particle.draw(ctx));
       bloodSplattersRef.current.forEach((splatter) => splatter.draw(ctx));
       floatingTextsRef.current.forEach((text) => text.draw(ctx));
