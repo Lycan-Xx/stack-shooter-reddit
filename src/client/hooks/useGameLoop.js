@@ -11,6 +11,8 @@ import {
   renderDeathOverlay,
   renderSpawnProtection,
 } from '../lib/serverEntityRenderer.js';
+import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
+import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -91,6 +93,10 @@ export function useGameLoop(canvasRef, multiplayerClient) {
   const particlesRef = useRef([]);
   const bloodSplattersRef = useRef([]);
   const floatingTextsRef = useRef([]);
+  const hitMarkersRef = useRef([]);
+  const damageNumbersRef = useRef([]);
+  const hitEffectsRef = useRef([]);
+  const killFeedRef = useRef(new KillFeed());
   const imagesRef = useRef({
     vampire: new Image(),
     player: new Image(),
@@ -149,6 +155,14 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
   const showFloatingText = (x, y, text, color) => {
     floatingTextsRef.current.push(new FloatingText(x, y, text, color));
+  };
+
+  const showHitMarker = (x, y, isKill = false) => {
+    hitMarkersRef.current.push(new HitMarker(x, y, isKill));
+  };
+
+  const showDamageNumber = (x, y, damage, isKill = false) => {
+    damageNumbersRef.current.push(new DamageNumber(x, y, damage, isKill, false));
   };
 
   const showWaveInfo = (text) => {
@@ -523,12 +537,54 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
 
         if (localPlayer) {
+          // Detect damage taken
+          const previousHealth = player.health;
+          const newHealth = localPlayer.health;
+
+          if (newHealth < previousHealth && !localPlayer.isDead) {
+            const damage = previousHealth - newHealth;
+            // Show damage effect
+            hitEffectsRef.current.push(new HitEffect(player.x, player.y, '#ff0000'));
+            damageNumbersRef.current.push(new DamageNumber(player.x, player.y - 30, damage, false, false));
+            soundManager.play('enemyHit'); // Reuse existing sound
+          }
+
+          // Detect death
+          if (localPlayer.isDead && !player.isDead) {
+            soundManager.play('gameOver'); // Death sound
+          }
+
+          // Detect respawn
+          if (!localPlayer.isDead && player.isDead) {
+            soundManager.play('respawn'); // Respawn sound
+          }
+
           // Sync health from server
           player.health = localPlayer.health;
           player.maxHealth = localPlayer.maxHealth;
+          player.isDead = localPlayer.isDead;
+
+          // Detect power-up pickup
+          const previousPowerUpCount = player.powerUps?.length || 0;
+          const newPowerUpCount = localPlayer.powerUps?.length || 0;
+          if (newPowerUpCount > previousPowerUpCount) {
+            soundManager.play('powerUp'); // Power-up pickup sound
+          }
 
           // Sync power-ups
           player.powerUps = localPlayer.powerUps || [];
+
+          // Detect kills
+          const previousKills = game.kills || 0;
+          const newKills = localPlayer.kills || 0;
+          if (newKills > previousKills) {
+            soundManager.play('playerKill'); // Kill sound
+            showFloatingText(canvas.width / 2, canvas.height / 2, 'KILL!', '#ff0000');
+          }
+
+          // Update game kills
+          game.kills = newKills;
+          game.score = localPlayer.score || 0;
 
           // Apply speed power-up
           const speedPowerUp = player.powerUps.find((p) => p.type === 'speed');
@@ -546,6 +602,15 @@ export function useGameLoop(canvasRef, multiplayerClient) {
             return; // Skip movement and actions when dead
           }
         }
+
+        // Track kills for kill feed
+        matchState.players?.forEach((p) => {
+          const prevPlayer = remotePlayers.find((rp) => rp.id === p.id);
+          if (prevPlayer && p.kills > prevPlayer.kills) {
+            // Someone got a kill - we don't know who they killed, but show in feed
+            // This is a simplified version - full implementation would need server events
+          }
+        });
       }
     }
 
@@ -673,6 +738,28 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     for (let i = floatingTexts.length - 1; i >= 0; i--) {
       if (!floatingTexts[i].update()) {
         floatingTexts.splice(i, 1);
+      }
+    }
+
+    // Update visual effects
+    const hitMarkers = hitMarkersRef.current;
+    for (let i = hitMarkers.length - 1; i >= 0; i--) {
+      if (!hitMarkers[i].update()) {
+        hitMarkers.splice(i, 1);
+      }
+    }
+
+    const damageNumbers = damageNumbersRef.current;
+    for (let i = damageNumbers.length - 1; i >= 0; i--) {
+      if (!damageNumbers[i].update()) {
+        damageNumbers.splice(i, 1);
+      }
+    }
+
+    const hitEffects = hitEffectsRef.current;
+    for (let i = hitEffects.length - 1; i >= 0; i--) {
+      if (!hitEffects[i].update()) {
+        hitEffects.splice(i, 1);
       }
     }
 
@@ -877,6 +964,16 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       particlesRef.current.forEach((particle) => particle.draw(ctx));
       bloodSplattersRef.current.forEach((splatter) => splatter.draw(ctx));
       floatingTextsRef.current.forEach((text) => text.draw(ctx));
+
+      // Draw visual effects
+      hitMarkersRef.current.forEach((marker) => marker.draw(ctx));
+      damageNumbersRef.current.forEach((number) => number.draw(ctx));
+      hitEffectsRef.current.forEach((effect) => effect.draw(ctx));
+
+      // Draw kill feed in multiplayer
+      if (game.isMultiplayer) {
+        killFeedRef.current.draw(ctx, canvas);
+      }
     }
   };
 

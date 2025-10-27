@@ -111,6 +111,9 @@ soundManager.load(
 soundManager.load('upgrade', 'https://play.rosebud.ai/assets/Retro Event UI 13.wav?jgf1', 0.7);
 soundManager.load('gameOver', 'https://play.rosebud.ai/assets/Retro Event Echo 12.wav?RERk', 0.8);
 soundManager.load('uiClick', 'https://play.rosebud.ai/assets/Retro Event UI 01.wav?24vp', 0.6);
+soundManager.load('powerUp', 'https://play.rosebud.ai/assets/Retro PickUp Coin 07.wav?A9Vy', 0.7);
+soundManager.load('respawn', 'https://play.rosebud.ai/assets/Retro Event StereoUP 02.wav?GMTo', 0.6);
+soundManager.load('playerKill', 'https://play.rosebud.ai/assets/Retro Impact Punch 07.wav?a0jF', 0.9);
 
 // Load background music
 soundManager.loadMusic('https://play.rosebud.ai/assets/1-08. No Mortals Allowed.mp3?y9Cy');
