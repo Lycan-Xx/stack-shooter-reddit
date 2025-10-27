@@ -12,7 +12,6 @@ import {
   renderSpawnProtection,
 } from '../lib/serverEntityRenderer.js';
 import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
-import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -476,12 +475,12 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
   const restartGame = () => {
     soundManager.play('uiClick');
-    
+
     // Leave multiplayer match if active
     if (gameRef.current.isMultiplayer && multiplayerClient) {
       multiplayerClient.leaveMatch();
     }
-    
+
     setGameState('start');
     gameRef.current.state = 'start';
     gameRef.current.isMultiplayer = false;
@@ -493,7 +492,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
   const togglePause = () => {
     const game = gameRef.current;
-    
+
     if (game.state !== 'playing' && game.state !== 'tutorial') {
       return;
     }
@@ -545,7 +544,9 @@ export function useGameLoop(canvasRef, multiplayerClient) {
             const damage = previousHealth - newHealth;
             // Show damage effect
             hitEffectsRef.current.push(new HitEffect(player.x, player.y, '#ff0000'));
-            damageNumbersRef.current.push(new DamageNumber(player.x, player.y - 30, damage, false, false));
+            damageNumbersRef.current.push(
+              new DamageNumber(player.x, player.y - 30, damage, false, false)
+            );
             soundManager.play('enemyHit'); // Reuse existing sound
           }
 
@@ -864,14 +865,18 @@ export function useGameLoop(canvasRef, multiplayerClient) {
           ctx.fillStyle = '#4a90e2';
           ctx.font = 'bold 14px Arial';
           ctx.textAlign = 'center';
-          ctx.fillText(remotePlayer.username, interpolated.x, interpolated.y - player.size / 2 - 10);
+          ctx.fillText(
+            remotePlayer.username,
+            interpolated.x,
+            interpolated.y - player.size / 2 - 10
+          );
           ctx.restore();
 
           // Draw health bar
           const healthBarWidth = 50;
           const healthBarHeight = 5;
           const healthPercent = remotePlayer.health / remotePlayer.maxHealth;
-          
+
           ctx.save();
           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
           ctx.fillRect(
@@ -880,7 +885,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
             healthBarWidth,
             healthBarHeight
           );
-          ctx.fillStyle = healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336';
+          ctx.fillStyle =
+            healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336';
           ctx.fillRect(
             interpolated.x - healthBarWidth / 2,
             interpolated.y - player.size / 2 - 25,
