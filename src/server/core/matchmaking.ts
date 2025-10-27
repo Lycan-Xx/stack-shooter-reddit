@@ -23,7 +23,7 @@ export class MatchmakingService {
     if (activeMatchData) {
       const match: MatchState = JSON.parse(activeMatchData);
       
-      // If match is playing and not full, allow join
+      // If match is waiting and not full, allow join
       if (match.status === 'waiting' && match.players.length < MAX_PLAYERS) {
         const newPlayer: PlayerState = {
           id: playerId,
@@ -35,18 +35,23 @@ export class MatchmakingService {
           maxHealth: 100,
           isDashing: false,
           kills: 0,
+          vampireKills: 0,
           score: 0,
+          isDead: false,
+          powerUps: [],
         };
 
         match.players.push(newPlayer);
-        await redis.set(matchKey, JSON.stringify(match));
         
-        // Check if we should start countdown
-        if (match.players.length >= MIN_PLAYERS) {
-          await this.startMatchCountdown(postId, match.matchId);
+        // Only start countdown if we have MIN_PLAYERS (2+) and not already counting down
+        if (match.players.length >= MIN_PLAYERS && match.status === 'waiting') {
+          match.status = 'countdown';
+          match.startTime = Date.now() + MATCH_TIMEOUT; // 15 seconds from now
         }
+        
+        await redis.set(matchKey, JSON.stringify(match));
 
-        return { matchId: match.matchId, playerId, queuePosition: match.players.length };
+        return { matchId: match.matchId, playerId, queuePosition: 0 };
       }
     }
 
@@ -102,7 +107,10 @@ export class MatchmakingService {
         maxHealth: 100,
         isDashing: false,
         kills: 0,
+        vampireKills: 0,
         score: 0,
+        isDead: false,
+        powerUps: [],
       });
     }
 
@@ -202,17 +210,10 @@ export class MatchmakingService {
     const currentPlayer = match.players[playerIndex];
     if (!currentPlayer) return false;
     
+    // Update player with spread to preserve all properties
     match.players[playerIndex] = {
-      id: currentPlayer.id,
-      username: currentPlayer.username,
-      x: updates.x ?? currentPlayer.x,
-      y: updates.y ?? currentPlayer.y,
-      angle: updates.angle ?? currentPlayer.angle,
-      health: updates.health ?? currentPlayer.health,
-      maxHealth: updates.maxHealth ?? currentPlayer.maxHealth,
-      isDashing: updates.isDashing ?? currentPlayer.isDashing,
-      kills: updates.kills ?? currentPlayer.kills,
-      score: updates.score ?? currentPlayer.score,
+      ...currentPlayer,
+      ...updates,
     };
     await redis.set(matchKey, JSON.stringify(match));
     

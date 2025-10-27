@@ -28,6 +28,11 @@ export default function HUD({
   const minutes = Math.floor(timeRemaining / 60000);
   const seconds = Math.floor((timeRemaining % 60000) / 1000);
   const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  
+  // Determine timer color based on remaining time
+  const isLowTime = timeRemaining < 60000; // Less than 1 minute
+  const isCriticalTime = timeRemaining < 30000; // Less than 30 seconds
+  const timerClass = isCriticalTime ? 'timer-critical' : isLowTime ? 'timer-warning' : 'timer-normal';
 
   return (
     <>
@@ -42,8 +47,8 @@ export default function HUD({
         </div>
         {isMultiplayer ? (
           <>
-            <div className="hud-item timer-display">
-              <strong>⏱️ Time:</strong> <span className="timer-text">{timeText}</span>
+            <div className={`hud-item timer-display ${timerClass}`}>
+              <strong>⏱️</strong> <span className="timer-text">{timeText}</span>
             </div>
             <div className="hud-item">
               <strong>🎮 Players:</strong> <span>{playerCount}</span>
@@ -78,6 +83,14 @@ export default function HUD({
           </>
         )}
       </div>
+
+      {/* Large timer display for multiplayer */}
+      {isMultiplayer && (
+        <div id="match-timer" className={timerClass}>
+          <div className="match-timer-label">MATCH TIME</div>
+          <div className="match-timer-value">{timeText}</div>
+        </div>
+      )}
 
       {/* Power-up indicators */}
       {powerUps && powerUps.length > 0 && (

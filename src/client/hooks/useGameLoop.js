@@ -12,6 +12,7 @@ import {
   renderSpawnProtection,
 } from '../lib/serverEntityRenderer.js';
 import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
+import { loadGameImages } from '../lib/imageLoader.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -104,10 +105,14 @@ export function useGameLoop(canvasRef, multiplayerClient) {
   const cursorLockRef = useRef({ locked: false, requested: false });
 
   useEffect(() => {
-    // Load images
-    imagesRef.current.vampire.src = 'https://play.rosebud.ai/assets/Vampire Enemy.png?0u3E';
-    imagesRef.current.player.src = 'https://play.rosebud.ai/assets/character_idle.png?Poid';
-    imagesRef.current.heart.src = 'https://play.rosebud.ai/assets/heart.png?Cn7I';
+    // Load images with fallback support
+    loadGameImages().then((images) => {
+      imagesRef.current.vampire = images.vampire;
+      imagesRef.current.player = images.player;
+      imagesRef.current.heart = images.heart;
+    }).catch((error) => {
+      console.error('Error loading images:', error);
+    });
 
     // Initialize joystick input
     window.joystickInput = { x: 0, y: 0 };
@@ -179,6 +184,11 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const game = gameRef.current;
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Don't spawn waves in multiplayer - server handles enemies
+    if (game.isMultiplayer) {
+      return;
+    }
 
     if (game.waveInProgress) return;
 
@@ -764,51 +774,54 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       }
     }
 
-    const allEnemiesSpawned = game.spawnedEnemies >= game.expectedEnemies;
-    if (
-      enemies.length === 0 &&
-      game.waveInProgress &&
-      !game.waitingForNextWave &&
-      allEnemiesSpawned &&
-      (game.state === 'playing' || game.state === 'tutorial')
-    ) {
-      game.waveInProgress = false;
-      game.waitingForNextWave = true;
+    // Wave completion logic only for solo mode
+    if (!game.isMultiplayer) {
+      const allEnemiesSpawned = game.spawnedEnemies >= game.expectedEnemies;
+      if (
+        enemies.length === 0 &&
+        game.waveInProgress &&
+        !game.waitingForNextWave &&
+        allEnemiesSpawned &&
+        (game.state === 'playing' || game.state === 'tutorial')
+      ) {
+        game.waveInProgress = false;
+        game.waitingForNextWave = true;
 
-      player.health = player.maxHealth;
-      updateHUD();
-
-      soundManager.play('waveComplete');
-      const bonus = 50 * DIFFICULTY[game.difficulty].scoreMultiplier;
-      if (bonus > 0) {
-        game.score += bonus;
+        player.health = player.maxHealth;
         updateHUD();
-        showFloatingText(
-          canvas.width / 2,
-          canvas.height / 2,
-          `Wave Complete! +${bonus}`,
-          '#4CAF50'
-        );
-      } else {
-        showFloatingText(canvas.width / 2, canvas.height / 2, `Wave Complete!`, '#4CAF50');
-      }
 
-      if (game.wave % 3 === 0 && game.state === 'playing') {
-        showUpgradeScreen();
-      } else {
-        setTimeout(() => {
-          if ((game.state === 'playing' || game.state === 'tutorial') && game.waitingForNextWave) {
-            game.wave++;
-            game.waitingForNextWave = false;
-            updateHUD();
+        soundManager.play('waveComplete');
+        const bonus = 50 * DIFFICULTY[game.difficulty].scoreMultiplier;
+        if (bonus > 0) {
+          game.score += bonus;
+          updateHUD();
+          showFloatingText(
+            canvas.width / 2,
+            canvas.height / 2,
+            `Wave Complete! +${bonus}`,
+            '#4CAF50'
+          );
+        } else {
+          showFloatingText(canvas.width / 2, canvas.height / 2, `Wave Complete!`, '#4CAF50');
+        }
 
-            if (game.state === 'tutorial') {
-              continTutorial();
-            } else {
-              spawnWave();
+        if (game.wave % 3 === 0 && game.state === 'playing') {
+          showUpgradeScreen();
+        } else {
+          setTimeout(() => {
+            if ((game.state === 'playing' || game.state === 'tutorial') && game.waitingForNextWave) {
+              game.wave++;
+              game.waitingForNextWave = false;
+              updateHUD();
+
+              if (game.state === 'tutorial') {
+                continTutorial();
+              } else {
+                spawnWave();
+              }
             }
-          }
-        }, 2000);
+          }, 2000);
+        }
       }
     }
   };

@@ -26,3 +26,70 @@
   text-align: center;
   line-height: 1.8;
 }
+
+#final-stats .match-stats {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(255, 0, 0, 0.1);
+  border: 2px solid #ff0000;
+  border-radius: 10px;
+}
+
+#final-stats .match-stats h3 {
+  color: #ff0000;
+  font-size: 20px;
+  margin: 0 0 15px 0;
+}
+
+#final-stats .overall-stats {
+  padding: 20px;
+  background: rgba(74, 144, 226, 0.1);
+  border: 2px solid #4a90e2;
+  border-radius: 10px;
+  max-width: 600px;
+}
+
+#final-stats .overall-stats h3 {
+  color: #4a90e2;
+  font-size: 20px;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+#final-stats .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  font-size: 16px;
+}
+
+#final-stats .stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+}
+
+#final-stats .stat-label {
+  color: #aaa;
+}
+
+#final-stats .stat-value {
+  color: #4a90e2;
+  font-weight: bold;
+}
+
+@media (max-width: 600px) {
+  #final-stats .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  #game-over h2 {
+    font-size: 48px;
+  }
+  
+  #final-stats {
+    font-size: 18px;
+  }
+}

@@ -18,10 +18,28 @@ export default function MatchmakingScreen({ onMatchFound, onCancel, multiplayerC
 
       if (result.success) {
         if (result.matchId) {
-          // Match found immediately
-          setStatus('found');
-          setPlayersFound(2);
-          startCountdown();
+          // Match found immediately - get full match state for countdown
+          try {
+            const response = await fetch('/api/match/state');
+            const data = await response.json();
+            
+            if (data.match) {
+              setStatus('found');
+              setPlayersFound(data.match.players.length);
+              
+              // Use server timestamp for synchronized countdown
+              if (data.match.startTime) {
+                startCountdownFromServer(data.match.startTime);
+              } else {
+                startCountdown();
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching match state:', error);
+            setStatus('found');
+            setPlayersFound(2);
+            startCountdown(); // Fallback
+          }
         } else {
           // In queue
           setStatus('searching');
@@ -48,7 +66,13 @@ export default function MatchmakingScreen({ onMatchFound, onCancel, multiplayerC
             clearInterval(pollInterval);
             setStatus('found');
             setPlayersFound(data.match.players.length);
-            startCountdown();
+            
+            // Use server timestamp for synchronized countdown
+            if (data.match.startTime) {
+              startCountdownFromServer(data.match.startTime);
+            } else {
+              startCountdown();
+            }
           }
         } catch (error) {
           console.error('Error polling for match:', error);
@@ -56,7 +80,27 @@ export default function MatchmakingScreen({ onMatchFound, onCancel, multiplayerC
       }, 1000);
     };
 
+    const startCountdownFromServer = (serverStartTime) => {
+      // Calculate time remaining based on server timestamp
+      const updateCountdown = () => {
+        const now = Date.now();
+        const timeLeft = Math.max(0, Math.ceil((serverStartTime - now) / 1000));
+        setCountdown(timeLeft);
+
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          if (mounted) {
+            onMatchFound();
+          }
+        }
+      };
+
+      updateCountdown(); // Update immediately
+      countdownInterval = setInterval(updateCountdown, 100); // Update every 100ms for accuracy
+    };
+
     const startCountdown = () => {
+      // Fallback for old behavior (shouldn't be used)
       let timeLeft = 15;
       setCountdown(timeLeft);
 

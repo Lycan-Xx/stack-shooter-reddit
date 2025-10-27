@@ -49,27 +49,25 @@ export default function StartScreen({ onStartGame, onStartTutorial, onStartMulti
         </p>
 
         {/* Quick Stats Display */}
-        {communityStats && (
-          <div className="quick-stats">
-            <div className="quick-stat">
-              <span className="stat-icon">🧛</span>
-              <span className="stat-value">{formatNumber(communityStats.totalVampiresKilled)}</span>
-              <span className="stat-label">Vampires Slain</span>
-            </div>
-            <div className="quick-stat">
-              <span className="stat-icon">⚔️</span>
-              <span className="stat-value">{formatNumber(communityStats.totalMatches)}</span>
-              <span className="stat-label">Battles Fought</span>
-            </div>
-            {playerStats && (
-              <div className="quick-stat highlight">
-                <span className="stat-icon">🏆</span>
-                <span className="stat-value">{playerStats.totalWins}</span>
-                <span className="stat-label">Your Wins</span>
-              </div>
-            )}
+        <div className="quick-stats">
+          <div className="quick-stat">
+            <span className="stat-icon">🧛</span>
+            <span className="stat-value">{formatNumber(communityStats?.totalVampiresKilled || 0)}</span>
+            <span className="stat-label">Vampires Slain</span>
           </div>
-        )}
+          <div className="quick-stat">
+            <span className="stat-icon">⚔️</span>
+            <span className="stat-value">{formatNumber(communityStats?.totalMatches || 0)}</span>
+            <span className="stat-label">Battles Fought</span>
+          </div>
+          {playerStats && (
+            <div className="quick-stat highlight">
+              <span className="stat-icon">🏆</span>
+              <span className="stat-value">{playerStats.totalWins}</span>
+              <span className="stat-label">Your Wins</span>
+            </div>
+          )}
+        </div>
 
         <div className="menu-buttons">
           <button className="btn multiplayer-btn" onClick={onStartMultiplayer}>
