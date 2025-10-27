@@ -103,15 +103,21 @@ export default function Game() {
           <TutorialOverlay text={tutorialText} onContinue={continTutorial} />
         )}
 
-        {isPaused && (gameState === 'playing' || gameState === 'tutorial') && (
+        {isPaused && (gameState === 'playing' || gameState === 'tutorial') && !showStats && (
           <PauseMenu 
             onResume={togglePause} 
-            onMainMenu={restartGame}
-            onViewStats={() => setShowStats(true)}
+            onExit={() => setShowStats(true)}
           />
         )}
 
-        {showStats && <StatsModal onClose={() => setShowStats(false)} />}
+        {showStats && (
+          <StatsModal 
+            onClose={() => {
+              setShowStats(false);
+              restartGame();
+            }} 
+          />
+        )}
 
         {matchState && matchState.status === 'finished' && (
           <MatchEndScreen

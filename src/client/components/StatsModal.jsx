@@ -115,7 +115,7 @@ export default function StatsModal({ onClose }) {
         )}
 
         <button className="btn close-stats-btn" onClick={onClose}>
-          Close
+          🏠 Main Menu
         </button>
       </div>
     </div>

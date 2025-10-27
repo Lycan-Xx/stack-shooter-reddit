@@ -25,9 +25,14 @@ class SoundManager {
   play(key) {
     if (!this.enabled || !this.sounds[key]) return;
 
-    const sound = this.sounds[key].audio.cloneNode();
-    sound.volume = this.volume * this.sounds[key].baseVolume;
-    sound.play().catch(() => {}); // Ignore autoplay errors
+    try {
+      const sound = this.sounds[key].audio.cloneNode();
+      sound.volume = this.volume * this.sounds[key].baseVolume;
+      sound.play().catch(() => {}); // Ignore autoplay and CSP errors
+    } catch (error) {
+      // Silently fail if CSP blocks audio
+      console.debug('Audio blocked by CSP');
+    }
   }
 
   playMusic() {

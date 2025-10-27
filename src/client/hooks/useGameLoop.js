@@ -12,7 +12,6 @@ import {
   renderSpawnProtection,
 } from '../lib/serverEntityRenderer.js';
 import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
-import { loadGameImages } from '../lib/imageLoader.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -98,25 +97,13 @@ export function useGameLoop(canvasRef, multiplayerClient) {
   const hitEffectsRef = useRef([]);
   const killFeedRef = useRef(new KillFeed());
   const imagesRef = useRef({
-    vampire: new Image(),
-    player: new Image(),
-    heart: new Image(),
     playerAvatar: new Image(), // Current player's Snoo
     remoteAvatars: new Map(), // Remote players' Snoos
   });
   const cursorLockRef = useRef({ locked: false, requested: false });
 
   useEffect(() => {
-    // Load images with fallback support
-    loadGameImages().then((images) => {
-      imagesRef.current.vampire = images.vampire;
-      imagesRef.current.player = images.player;
-      imagesRef.current.heart = images.heart;
-    }).catch((error) => {
-      console.error('Error loading images:', error);
-    });
-
-    // Load current user's avatar
+    // Load current user's Snoo avatar (primary player image)
     fetch('/api/init')
       .then(res => res.json())
       .then(data => {
@@ -130,9 +117,11 @@ export function useGameLoop(canvasRef, multiplayerClient) {
                 avatarImg.crossOrigin = 'anonymous';
                 avatarImg.onload = () => {
                   imagesRef.current.playerAvatar = avatarImg;
+                  // Use avatar as default player image too
+                  imagesRef.current.player = avatarImg;
                 };
                 avatarImg.onerror = () => {
-                  console.log('Failed to load avatar, using default');
+                  console.log('Failed to load avatar, using fallback circle');
                 };
                 avatarImg.src = avatarData.avatarUrl;
               }
@@ -911,10 +900,10 @@ export function useGameLoop(canvasRef, multiplayerClient) {
             avatarImg.src = remotePlayer.avatarUrl;
           }
 
-          // Use avatar if available, otherwise use default
-          const remoteImage = imagesRef.current.remoteAvatars.get(remotePlayer.id) || imagesRef.current.player;
+          // Use avatar if available, otherwise fallback to circle
+          const remoteImage = imagesRef.current.remoteAvatars.get(remotePlayer.id);
 
-          if (remoteImage.complete) {
+          if (remoteImage && remoteImage.complete && remoteImage.src) {
             ctx.save();
             ctx.translate(interpolated.x, interpolated.y);
             ctx.rotate(interpolated.angle);
@@ -1006,12 +995,10 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       ctx.restore();
 
       // Draw local player
-      // Try to use Snoo avatar first, fallback to default sprite
-      const playerImage = imagesRef.current.playerAvatar.complete && imagesRef.current.playerAvatar.src
-        ? imagesRef.current.playerAvatar
-        : imagesRef.current.player;
+      // Use Snoo avatar (playerAvatar is set from Reddit)
+      const playerImage = imagesRef.current.playerAvatar;
 
-      if (playerImage.complete) {
+      if (playerImage && playerImage.complete && playerImage.src) {
         ctx.save();
         ctx.translate(player.x, player.y);
         ctx.rotate(player.angle);
@@ -1066,7 +1053,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         if (matchState) {
           // Draw server-managed entities
           renderServerBullets(ctx, matchState.bullets);
-          renderServerVampires(ctx, matchState.vampires, imagesRef.current.vampire);
+          renderServerVampires(ctx, matchState.vampires, null); // No image, use circles
           renderPowerUps(ctx, matchState.powerUps);
 
           // Check if local player is dead
