@@ -11,6 +11,8 @@ export default function HUD({
   maxDashEnergy,
   dashCooldown,
   maxDashCooldown,
+  isMultiplayer = false,
+  playerCount = 1,
 }) {
   const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
   const energyPercent = Math.max(0, Math.min(100, (dashEnergy / maxDashEnergy) * 100));
@@ -32,6 +34,11 @@ export default function HUD({
         <div className="hud-item">
           <strong>Wave:</strong> <span id="wave">{wave}</span>
         </div>
+        {isMultiplayer && (
+          <div className="hud-item multiplayer-indicator">
+            <strong>🎮 Players:</strong> <span>{playerCount}</span>
+          </div>
+        )}
         <div className="hud-item">
           <strong>Enemies:</strong> <span id="enemies">{enemies}</span>
         </div>

@@ -1,7 +1,16 @@
 import express from 'express';
-import { InitResponse, IncrementResponse, DecrementResponse } from '../shared/types/api';
+import {
+  InitResponse,
+  IncrementResponse,
+  DecrementResponse,
+  JoinMatchResponse,
+  MatchUpdateResponse,
+  LeaveMatchResponse,
+  GameAction,
+} from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
+import { MatchmakingService } from './core/matchmaking';
 
 const app = express();
 
@@ -121,6 +130,139 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
       status: 'error',
       message: 'Failed to create post',
     });
+  }
+});
+
+// Multiplayer endpoints
+router.post<unknown, JoinMatchResponse>('/api/match/join', async (_req, res): Promise<void> => {
+  const { postId } = context;
+  
+  if (!postId) {
+    res.status(400).json({
+      success: false,
+      matchId: '',
+      playerId: '',
+      username: '',
+      queuePosition: 0,
+    });
+    return;
+  }
+
+  try {
+    const username = (await reddit.getCurrentUsername()) ?? 'Player';
+    const result = await MatchmakingService.joinMatch(postId, username);
+    
+    res.json({
+      success: true,
+      matchId: result.matchId,
+      playerId: result.playerId,
+      username,
+      queuePosition: result.queuePosition,
+      estimatedWait: result.queuePosition > 0 ? 15 : 0,
+    });
+  } catch (error) {
+    console.error('Error joining match:', error);
+    res.status(500).json({
+      success: false,
+      matchId: '',
+      playerId: '',
+      username: '',
+    });
+  }
+});
+
+router.get<unknown, MatchUpdateResponse>('/api/match/state', async (req, res): Promise<void> => {
+  const { postId } = context;
+  const since = parseInt((req.query.since as string) || '0');
+  
+  if (!postId) {
+    res.status(400).json({
+      match: null as any,
+      actions: [],
+    });
+    return;
+  }
+
+  try {
+    const match = await MatchmakingService.getMatch(postId);
+    const actions = await MatchmakingService.getActions(postId, since);
+    
+    res.json({
+      match: match as any,
+      actions,
+    });
+  } catch (error) {
+    console.error('Error getting match state:', error);
+    res.status(500).json({
+      match: null as any,
+      actions: [],
+    });
+  }
+});
+
+router.post('/api/match/action', async (req, res): Promise<void> => {
+  const { postId } = context;
+  
+  if (!postId) {
+    res.status(400).json({ success: false });
+    return;
+  }
+
+  try {
+    const action: GameAction = req.body;
+    action.timestamp = Date.now();
+    
+    await MatchmakingService.broadcastAction(postId, action);
+    
+    // Update player state if it's a move action
+    if (action.type === 'move' && action.data) {
+      await MatchmakingService.updatePlayerState(postId, action.playerId, {
+        x: action.data.x,
+        y: action.data.y,
+        angle: action.data.angle,
+        isDashing: action.data.isDashing,
+      });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error broadcasting action:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
+router.post<unknown, LeaveMatchResponse>('/api/match/leave', async (req, res): Promise<void> => {
+  const { postId } = context;
+  const { playerId } = req.body as { playerId: string };
+  
+  if (!postId || !playerId) {
+    res.status(400).json({ success: false });
+    return;
+  }
+
+  try {
+    const success = await MatchmakingService.leaveMatch(postId, playerId);
+    res.json({ success });
+  } catch (error) {
+    console.error('Error leaving match:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
+router.post('/api/match/start', async (_req, res): Promise<void> => {
+  const { postId } = context;
+  
+  if (!postId) {
+    res.status(400).json({ success: false });
+    return;
+  }
+
+  try {
+    const success = await MatchmakingService.startMatch(postId);
+    res.json({ success });
+  } catch (error) {
+    console.error('Error starting match:', error);
+    res.status(500).json({ success: false });
   }
 });
 

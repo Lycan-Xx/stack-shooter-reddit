@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { soundManager } from '../lib/sound.js';
+import { multiplayerClient } from '../lib/multiplayer.js';
 import HUD from './HUD';
 import StartScreen from './StartScreen';
 import GameOver from './GameOver';
@@ -9,10 +10,12 @@ import TutorialOverlay from './TutorialOverlay';
 import PauseMenu from './PauseMenu';
 import Controls from './Controls';
 import MuteButton from './MuteButton';
+import MatchmakingScreen from './MatchmakingScreen';
 import './Game.css';
 
 export default function Game() {
   const canvasRef = useRef(null);
+  const [showMatchmaking, setShowMatchmaking] = useState(false);
 
   const {
     gameState,
@@ -22,14 +25,31 @@ export default function Game() {
     tutorialText,
     wasdKeys,
     isPaused,
+    isMultiplayer,
+    remotePlayers,
     startGame,
     startTutorialMode,
+    startMultiplayerGame,
     continTutorial,
     restartGame,
     selectUpgrade,
     performDash,
     togglePause,
-  } = useGameLoop(canvasRef);
+  } = useGameLoop(canvasRef, multiplayerClient);
+
+  const handleStartMultiplayer = () => {
+    soundManager.play('uiClick');
+    setShowMatchmaking(true);
+  };
+
+  const handleMatchFound = () => {
+    setShowMatchmaking(false);
+    startMultiplayerGame();
+  };
+
+  const handleCancelMatchmaking = () => {
+    setShowMatchmaking(false);
+  };
 
   return (
     <div id="game-container">
@@ -38,15 +58,27 @@ export default function Game() {
       <div id="ui-overlay">
         {(gameState === 'playing' || gameState === 'tutorial') && (
           <>
-            <HUD {...hudData} />
+            <HUD {...hudData} isMultiplayer={isMultiplayer} playerCount={remotePlayers.length + 1} />
             <div id="difficulty-badge">{difficultyBadge}</div>
           </>
         )}
 
         <div id="wave-info"></div>
 
-        {gameState === 'start' && (
-          <StartScreen onStartGame={startGame} onStartTutorial={startTutorialMode} />
+        {gameState === 'start' && !showMatchmaking && (
+          <StartScreen
+            onStartGame={startGame}
+            onStartTutorial={startTutorialMode}
+            onStartMultiplayer={handleStartMultiplayer}
+          />
+        )}
+
+        {showMatchmaking && (
+          <MatchmakingScreen
+            onMatchFound={handleMatchFound}
+            onCancel={handleCancelMatchmaking}
+            multiplayerClient={multiplayerClient}
+          />
         )}
 
         {gameState === 'gameOver' && (

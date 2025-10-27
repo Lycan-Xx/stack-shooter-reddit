@@ -1,6 +1,6 @@
 import './StartScreen.css';
 
-export default function StartScreen({ onStartGame, onStartTutorial }) {
+export default function StartScreen({ onStartGame, onStartTutorial, onStartMultiplayer }) {
   return (
     <div id="start-screen">
       <h1>🧛 Vampire Siege</h1>
@@ -10,11 +10,15 @@ export default function StartScreen({ onStartGame, onStartTutorial }) {
       </p>
 
       <div className="menu-buttons">
+        <button className="btn multiplayer-btn" onClick={onStartMultiplayer}>
+          🎮 Multiplayer (2-12 Players)
+        </button>
+
         <button className="btn tutorial-btn-menu" onClick={onStartTutorial}>
           📚 Play Tutorial
         </button>
 
-        <p style={{ fontSize: '18px', margin: '20px 0 10px 0' }}>Select Difficulty:</p>
+        <p style={{ fontSize: '18px', margin: '20px 0 10px 0' }}>Solo Play - Select Difficulty:</p>
         <div className="difficulty-buttons">
           <button className="btn difficulty-btn" onClick={() => onStartGame('easy')}>
             😊 Easy

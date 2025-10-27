@@ -60,6 +60,18 @@
   transform: scale(1.05);
 }
 
+.multiplayer-btn {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  font-size: 20px;
+  padding: 20px 40px;
+}
+
+.multiplayer-btn:hover {
+  background: rgba(76, 175, 80, 0.5);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+}
+
 .tutorial-btn-menu {
   background: rgba(255, 170, 0, 0.2);
   border-color: #ffaa00;

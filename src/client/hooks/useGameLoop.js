@@ -5,7 +5,7 @@ import { tutorialSteps, nextTutorialStep, startTutorial } from '../lib/tutorial.
 import { getRandomUpgrades, applyUpgrade } from '../lib/upgrades.js';
 import { soundManager } from '../lib/sound.js';
 
-export function useGameLoop(canvasRef) {
+export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
   const [hudData, setHudData] = useState({
     health: 100,
@@ -24,6 +24,8 @@ export function useGameLoop(canvasRef) {
   const [upgradeOptions, setUpgradeOptions] = useState([]);
   const [tutorialText, setTutorialText] = useState('');
   const [wasdKeys, setWasdKeys] = useState(new Set());
+  const [isMultiplayer, setIsMultiplayer] = useState(false);
+  const [remotePlayers, setRemotePlayers] = useState([]);
 
   const gameRef = useRef({
     state: 'start',
@@ -38,6 +40,8 @@ export function useGameLoop(canvasRef) {
     expectedEnemies: 0,
     spawnedEnemies: 0,
     isFirstGame: true,
+    isMultiplayer: false,
+    lastPositionSync: 0,
   });
 
   const [isPaused, setIsPaused] = useState(false);
@@ -215,6 +219,11 @@ export function useGameLoop(canvasRef) {
       );
     }
 
+    // Broadcast shoot action in multiplayer
+    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+      multiplayerClient.sendShoot(player.x, player.y, angle);
+    }
+
     updateHUD();
   };
 
@@ -235,6 +244,11 @@ export function useGameLoop(canvasRef) {
 
       for (let i = 0; i < 20; i++) {
         particlesRef.current.push(new Particle(player.x, player.y, '#4a90e2'));
+      }
+
+      // Broadcast dash in multiplayer
+      if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+        multiplayerClient.sendDash();
       }
 
       setTimeout(() => {
@@ -321,7 +335,9 @@ export function useGameLoop(canvasRef) {
 
     soundManager.play('uiClick');
     game.difficulty = selectedDifficulty;
+    game.isMultiplayer = false;
     setDifficulty(selectedDifficulty);
+    setIsMultiplayer(false);
 
     const badges = {
       easy: '😊 EASY MODE',
@@ -330,6 +346,22 @@ export function useGameLoop(canvasRef) {
       nightmare: '💀 NIGHTMARE MODE',
     };
     setDifficultyBadge(badges[selectedDifficulty]);
+
+    setGameState('playing');
+    game.state = 'playing';
+    initGame();
+    soundManager.playMusic();
+  };
+
+  const startMultiplayerGame = () => {
+    const game = gameRef.current;
+
+    soundManager.play('uiClick');
+    game.difficulty = 'normal';
+    game.isMultiplayer = true;
+    setDifficulty('normal');
+    setIsMultiplayer(true);
+    setDifficultyBadge('🎮 MULTIPLAYER');
 
     setGameState('playing');
     game.state = 'playing';
@@ -388,8 +420,17 @@ export function useGameLoop(canvasRef) {
 
   const restartGame = () => {
     soundManager.play('uiClick');
+    
+    // Leave multiplayer match if active
+    if (gameRef.current.isMultiplayer && multiplayerClient) {
+      multiplayerClient.leaveMatch();
+    }
+    
     setGameState('start');
     gameRef.current.state = 'start';
+    gameRef.current.isMultiplayer = false;
+    setIsMultiplayer(false);
+    setRemotePlayers([]);
     setIsPaused(false);
     gameRef.current.paused = false;
   };
@@ -420,6 +461,20 @@ export function useGameLoop(canvasRef) {
     const keys = keysRef.current;
 
     if (!canvas || (game.state !== 'playing' && game.state !== 'tutorial') || game.paused) return;
+
+    // Sync multiplayer state
+    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+      const now = Date.now();
+      if (now - game.lastPositionSync > 50) {
+        // Sync position every 50ms
+        multiplayerClient.sendPosition(player.x, player.y, player.angle, player.isDashing);
+        game.lastPositionSync = now;
+      }
+
+      // Update remote players list
+      const remotePlayers = multiplayerClient.getRemotePlayers();
+      setRemotePlayers(remotePlayers);
+    }
 
     if (player.dashCooldown > 0) {
       player.dashCooldown = Math.max(0, player.dashCooldown - 16);
@@ -611,6 +666,72 @@ export function useGameLoop(canvasRef) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (game.state === 'playing' || game.state === 'tutorial') {
+      // Draw remote players first (behind local player)
+      if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+        const remotePlayers = multiplayerClient.getRemotePlayers();
+        remotePlayers.forEach((remotePlayer) => {
+          // Interpolate for smooth movement
+          const interpolated = multiplayerClient.interpolatePlayer(
+            remotePlayer,
+            remotePlayer.x,
+            remotePlayer.y,
+            remotePlayer.angle
+          );
+
+          // Draw remote player
+          if (imagesRef.current.player.complete) {
+            ctx.save();
+            ctx.translate(interpolated.x, interpolated.y);
+            ctx.rotate(interpolated.angle);
+            ctx.globalAlpha = 0.8;
+            ctx.drawImage(
+              imagesRef.current.player,
+              -player.size / 2,
+              -player.size / 2,
+              player.size,
+              player.size
+            );
+            ctx.restore();
+          } else {
+            ctx.fillStyle = 'rgba(74, 144, 226, 0.8)';
+            ctx.beginPath();
+            ctx.arc(interpolated.x, interpolated.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Draw username above player
+          ctx.save();
+          ctx.fillStyle = '#4a90e2';
+          ctx.font = 'bold 14px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(remotePlayer.username, interpolated.x, interpolated.y - player.size / 2 - 10);
+          ctx.restore();
+
+          // Draw health bar
+          const healthBarWidth = 50;
+          const healthBarHeight = 5;
+          const healthPercent = remotePlayer.health / remotePlayer.maxHealth;
+          
+          ctx.save();
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillRect(
+            interpolated.x - healthBarWidth / 2,
+            interpolated.y - player.size / 2 - 25,
+            healthBarWidth,
+            healthBarHeight
+          );
+          ctx.fillStyle = healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336';
+          ctx.fillRect(
+            interpolated.x - healthBarWidth / 2,
+            interpolated.y - player.size / 2 - 25,
+            healthBarWidth * healthPercent,
+            healthBarHeight
+          );
+          ctx.restore();
+        });
+      }
+
+      // Draw aim line
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.lineWidth = 1;
@@ -622,6 +743,7 @@ export function useGameLoop(canvasRef) {
       ctx.setLineDash([]);
       ctx.restore();
 
+      // Draw local player
       if (imagesRef.current.player.complete) {
         ctx.save();
         ctx.translate(player.x, player.y);
@@ -639,6 +761,16 @@ export function useGameLoop(canvasRef) {
         ctx.beginPath();
         ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // Draw username for local player in multiplayer
+      if (game.isMultiplayer && multiplayerClient && multiplayerClient.username) {
+        ctx.save();
+        ctx.fillStyle = '#4caf50';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(multiplayerClient.username, player.x, player.y - player.size / 2 - 10);
+        ctx.restore();
       }
 
       bulletsRef.current.forEach((bullet) => bullet.draw(ctx));
@@ -821,8 +953,11 @@ export function useGameLoop(canvasRef) {
     tutorialText,
     wasdKeys,
     isPaused,
+    isMultiplayer,
+    remotePlayers,
     startGame,
     startTutorialMode,
+    startMultiplayerGame,
     continTutorial,
     restartGame,
     selectUpgrade,
