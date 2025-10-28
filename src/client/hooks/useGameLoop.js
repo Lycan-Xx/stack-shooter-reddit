@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { DIFFICULTY } from '../lib/difficulty.js';
-import { Vampire, Bullet, Particle, BloodSplatter, FloatingText } from '../lib/entities.js';
-import { tutorialSteps, nextTutorialStep, startTutorial } from '../lib/tutorial.js';
+import { Vampire, Particle, BloodSplatter, FloatingText } from '../lib/entities.js';
+import { tutorialSteps } from '../lib/tutorial.js';
 import { getRandomUpgrades, applyUpgrade } from '../lib/upgrades.js';
 import { soundManager } from '../lib/sound.js';
-import {
-  renderServerBullets,
-  renderServerVampires,
-  renderPowerUps,
-  renderDeathOverlay,
-  renderSpawnProtection,
-} from '../lib/serverEntityRenderer.js';
-import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
 import { loadImageWithFallback } from '../lib/imageLoader.js';
 
-export function useGameLoop(canvasRef, multiplayerClient) {
+export function useGameLoop(canvasRef) {
   const [gameState, setGameState] = useState('start');
   const [hudData, setHudData] = useState({
     health: 100,
@@ -33,8 +25,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
   const [upgradeOptions, setUpgradeOptions] = useState([]);
   const [tutorialText, setTutorialText] = useState('');
   const [wasdKeys, setWasdKeys] = useState(new Set());
-  const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [remotePlayers, setRemotePlayers] = useState([]);
 
   const gameRef = useRef({
     state: 'start',
@@ -49,8 +39,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     expectedEnemies: 0,
     spawnedEnemies: 0,
     isFirstGame: true,
-    isMultiplayer: false,
-    lastPositionSync: 0,
   });
 
   const [isPaused, setIsPaused] = useState(false);
@@ -148,25 +136,10 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const player = playerRef.current;
     const game = gameRef.current;
 
-    // Get match state if in multiplayer
-    let vampireKills = 0;
-    let wave = game.wave;
-
-    if (game.isMultiplayer && multiplayerClient) {
-      const matchState = multiplayerClient.getMatchState();
-      if (matchState) {
-        wave = matchState.wave || 1;
-        const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
-        if (localPlayer) {
-          vampireKills = localPlayer.vampireKills || 0;
-        }
-      }
-    }
-
     setHudData({
       health: player.health,
       maxHealth: player.maxHealth,
-      wave,
+      wave: game.wave,
       enemies: enemiesRef.current.length,
       kills: game.kills,
       score: game.score,
@@ -174,7 +147,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       maxDashEnergy: player.maxDashEnergy,
       dashCooldown: player.dashCooldown,
       maxDashCooldown: player.maxDashCooldown,
-      vampireKills,
       powerUps: player.powerUps || [],
     });
   };
@@ -288,18 +260,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-    // HITSCAN: Instant laser hit detection
-    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-      // Send hitscan to server
-      multiplayerClient.sendShoot(
-        player.x,
-        player.y,
-        angle,
-        player.weapon.damage,
-        player.weapon.piercing
-      );
-    } else {
-      // Solo mode: instant hitscan with improved line-circle intersection
+    // HITSCAN: Instant laser hit detection (solo mode only)
       const maxRange = 2000;
       const dirX = Math.cos(angle);
       const dirY = Math.sin(angle);
@@ -365,8 +326,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         if (pierceCount < 0) break;
       }
       
-      updateHUD();
-    }
+    updateHUD();
 
     soundManager.play('shoot');
 
@@ -445,38 +405,20 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     setGameState('upgrade');
   };
 
-  const selectUpgrade = async (upgradeKey) => {
+  const selectUpgrade = (upgradeKey) => {
     const player = playerRef.current;
     const game = gameRef.current;
 
-    // Apply upgrade locally
+    // Apply upgrade
     applyUpgrade(player, player.upgrades, upgradeKey);
+    setGameState('playing');
+    game.state = 'playing';
 
-    // In multiplayer, notify server
-    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-      try {
-        await fetch('/api/match/upgrade', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            playerId: multiplayerClient.playerId,
-            upgradeId: upgradeKey,
-          }),
-        });
-      } catch (error) {
-        console.error('Error sending upgrade selection:', error);
-      }
-    } else {
-      // Solo mode
-      setGameState('playing');
-      game.state = 'playing';
-
-      setTimeout(() => {
-        game.wave++;
-        updateHUD();
-        spawnWave();
-      }, 500);
-    }
+    setTimeout(() => {
+      game.wave++;
+      updateHUD();
+      spawnWave();
+    }, 500);
   };
 
   const initGame = () => {
@@ -523,9 +465,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
     soundManager.play('uiClick');
     game.difficulty = selectedDifficulty;
-    game.isMultiplayer = false;
     setDifficulty(selectedDifficulty);
-    setIsMultiplayer(false);
 
     const badges = {
       easy: '😊 EASY MODE',
@@ -541,21 +481,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     soundManager.playMusic();
   };
 
-  const startMultiplayerGame = () => {
-    const game = gameRef.current;
 
-    soundManager.play('uiClick');
-    game.difficulty = 'normal';
-    game.isMultiplayer = true;
-    setDifficulty('normal');
-    setIsMultiplayer(true);
-    setDifficultyBadge('🎮 MULTIPLAYER');
-
-    setGameState('playing');
-    game.state = 'playing';
-    initGame();
-    soundManager.playMusic();
-  };
 
   const startTutorialMode = () => {
     const game = gameRef.current;
@@ -608,17 +534,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
   const restartGame = () => {
     soundManager.play('uiClick');
-
-    // Leave multiplayer match if active
-    if (gameRef.current.isMultiplayer && multiplayerClient) {
-      multiplayerClient.leaveMatch();
-    }
-
     setGameState('start');
     gameRef.current.state = 'start';
-    gameRef.current.isMultiplayer = false;
-    setIsMultiplayer(false);
-    setRemotePlayers([]);
     setIsPaused(false);
     gameRef.current.paused = false;
   };
@@ -649,124 +566,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const keys = keysRef.current;
 
     if (!canvas || (game.state !== 'playing' && game.state !== 'tutorial') || game.paused) return;
-
-    // Sync multiplayer state
-    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-      const now = Date.now();
-      if (now - game.lastPositionSync > 150) {
-        // Sync position every 150ms (optimized for less lag)
-        multiplayerClient.sendPosition(player.x, player.y, player.angle, player.isDashing);
-        game.lastPositionSync = now;
-      }
-
-      // Update remote players list
-      const remotePlayers = multiplayerClient.getRemotePlayers();
-      setRemotePlayers(remotePlayers);
-
-      // Sync local player state from server
-      const matchState = multiplayerClient.getMatchState();
-      if (matchState) {
-        const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
-
-        if (localPlayer) {
-          // Detect damage taken
-          const previousHealth = player.health;
-          const newHealth = localPlayer.health;
-
-          if (newHealth < previousHealth && !localPlayer.isDead) {
-            const damage = previousHealth - newHealth;
-            // Show damage effect
-            hitEffectsRef.current.push(new HitEffect(player.x, player.y, '#ff0000'));
-            damageNumbersRef.current.push(
-              new DamageNumber(player.x, player.y - 30, damage, false, false)
-            );
-            soundManager.play('enemyHit'); // Reuse existing sound
-          }
-
-          // Detect death
-          if (localPlayer.isDead && !player.isDead) {
-            soundManager.play('gameOver'); // Death sound
-          }
-
-          // Detect respawn
-          if (!localPlayer.isDead && player.isDead) {
-            soundManager.play('respawn'); // Respawn sound
-          }
-
-          // Sync health from server
-          player.health = localPlayer.health;
-          player.maxHealth = localPlayer.maxHealth;
-          player.isDead = localPlayer.isDead;
-
-          // Client-side prediction with server reconciliation
-          // Only reconcile position if difference is significant (> 100px)
-          // This prevents jitter while allowing server corrections
-          const positionDiffX = Math.abs(player.x - localPlayer.x);
-          const positionDiffY = Math.abs(player.y - localPlayer.y);
-          const totalDiff = Math.sqrt(positionDiffX * positionDiffX + positionDiffY * positionDiffY);
-          const significantDiff = 100; // pixels - increased to reduce flickering
-
-          // Only reconcile if we haven't reconciled recently
-          if (!player.lastReconcile) player.lastReconcile = 0;
-          const timeSinceReconcile = now - player.lastReconcile;
-
-          if (totalDiff > significantDiff && timeSinceReconcile > 500) {
-            // Smoothly reconcile to server position
-            player.x += (localPlayer.x - player.x) * 0.2;
-            player.y += (localPlayer.y - player.y) * 0.2;
-            player.lastReconcile = now;
-          }
-          // Otherwise, trust client prediction for responsive movement
-
-          // Detect power-up pickup
-          const previousPowerUpCount = player.powerUps?.length || 0;
-          const newPowerUpCount = localPlayer.powerUps?.length || 0;
-          if (newPowerUpCount > previousPowerUpCount) {
-            soundManager.play('powerUp'); // Power-up pickup sound
-          }
-
-          // Sync power-ups
-          player.powerUps = localPlayer.powerUps || [];
-
-          // Detect kills
-          const previousKills = game.kills || 0;
-          const newKills = localPlayer.kills || 0;
-          if (newKills > previousKills) {
-            soundManager.play('playerKill'); // Kill sound
-            showFloatingText(canvas.width / 2, canvas.height / 2, 'KILL!', '#ff0000');
-          }
-
-          // Update game kills
-          game.kills = newKills;
-          game.score = localPlayer.score || 0;
-
-          // Apply speed power-up
-          const speedPowerUp = player.powerUps.find((p) => p.type === 'speed');
-          if (speedPowerUp) {
-            player.speed = 5 * speedPowerUp.value; // Apply speed boost
-          } else {
-            player.speed = 5; // Normal speed
-          }
-
-          // Update HUD with server state
-          updateHUD();
-
-          // Handle death state - disable controls
-          if (localPlayer.isDead) {
-            return; // Skip movement and actions when dead
-          }
-        }
-
-        // Track kills for kill feed
-        matchState.players?.forEach((p) => {
-          const prevPlayer = remotePlayers.find((rp) => rp.id === p.id);
-          if (prevPlayer && p.kills > prevPlayer.kills) {
-            // Someone got a kill - we don't know who they killed, but show in feed
-            // This is a simplified version - full implementation would need server events
-          }
-        });
-      }
-    }
 
     if (player.dashCooldown > 0) {
       player.dashCooldown = Math.max(0, player.dashCooldown - 16);
@@ -935,111 +734,6 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (game.state === 'playing' || game.state === 'tutorial') {
-      // Draw remote players first (behind local player)
-      if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-        const remotePlayers = multiplayerClient.getRemotePlayers();
-        remotePlayers.forEach((remotePlayer) => {
-          // Interpolate for smooth movement
-          const interpolated = multiplayerClient.interpolatePlayer(
-            remotePlayer,
-            remotePlayer.x,
-            remotePlayer.y,
-            remotePlayer.angle
-          );
-
-          // Draw remote player
-          // Load avatar if not already loaded
-          if (remotePlayer.avatarUrl && !imagesRef.current.remoteAvatars.has(remotePlayer.id)) {
-            const avatarImg = new Image();
-            avatarImg.crossOrigin = 'anonymous';
-            avatarImg.onload = () => {
-              imagesRef.current.remoteAvatars.set(remotePlayer.id, avatarImg);
-            };
-            avatarImg.src = remotePlayer.avatarUrl;
-          }
-
-          // Use avatar if available, otherwise fallback to circle
-          const remoteImage = imagesRef.current.remoteAvatars.get(remotePlayer.id);
-
-          if (remoteImage && remoteImage.complete && remoteImage.src) {
-            ctx.save();
-            ctx.translate(interpolated.x, interpolated.y);
-            ctx.rotate(interpolated.angle);
-            ctx.globalAlpha = 0.8;
-            
-            // Draw avatar (no clip - was causing flickering)
-            ctx.drawImage(
-              remoteImage,
-              -player.size / 2,
-              -player.size / 2,
-              player.size,
-              player.size
-            );
-            
-            // Draw direction indicator (arrow)
-            ctx.strokeStyle = '#4a90e2';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(player.radius * 0.5, 0);
-            ctx.lineTo(player.radius, 0);
-            ctx.stroke();
-            
-            ctx.restore();
-          } else {
-            ctx.fillStyle = 'rgba(74, 144, 226, 0.8)';
-            ctx.beginPath();
-            ctx.arc(interpolated.x, interpolated.y, player.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw direction indicator
-            ctx.strokeStyle = '#4a90e2';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(interpolated.x, interpolated.y);
-            ctx.lineTo(
-              interpolated.x + Math.cos(interpolated.angle) * player.radius,
-              interpolated.y + Math.sin(interpolated.angle) * player.radius
-            );
-            ctx.stroke();
-          }
-
-          // Draw username above player
-          ctx.save();
-          ctx.fillStyle = '#4a90e2';
-          ctx.font = 'bold 14px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(
-            remotePlayer.username,
-            interpolated.x,
-            interpolated.y - player.size / 2 - 10
-          );
-          ctx.restore();
-
-          // Draw health bar
-          const healthBarWidth = 50;
-          const healthBarHeight = 5;
-          const healthPercent = remotePlayer.health / remotePlayer.maxHealth;
-
-          ctx.save();
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillRect(
-            interpolated.x - healthBarWidth / 2,
-            interpolated.y - player.size / 2 - 25,
-            healthBarWidth,
-            healthBarHeight
-          );
-          ctx.fillStyle =
-            healthPercent > 0.5 ? '#4caf50' : healthPercent > 0.25 ? '#ff9800' : '#f44336';
-          ctx.fillRect(
-            interpolated.x - healthBarWidth / 2,
-            interpolated.y - player.size / 2 - 25,
-            healthBarWidth * healthPercent,
-            healthBarHeight
-          );
-          ctx.restore();
-        });
-      }
-
       // Draw aim line
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -1094,40 +788,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         ctx.stroke();
       }
 
-      // Draw username for local player in multiplayer
-      if (game.isMultiplayer && multiplayerClient && multiplayerClient.username) {
-        ctx.save();
-        ctx.fillStyle = '#4caf50';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(multiplayerClient.username, player.x, player.y - player.size / 2 - 10);
-        ctx.restore();
-      }
-
-      // Draw entities based on mode
-      if (game.isMultiplayer && multiplayerClient) {
-        const matchState = multiplayerClient.getMatchState();
-
-        if (matchState) {
-          // Draw server-managed entities (NO BULLETS - using hitscan)
-          renderServerVampires(ctx, matchState.vampires, null); // No image, use circles
-          renderPowerUps(ctx, matchState.powerUps);
-
-          // Check if local player is dead
-          const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
-          if (localPlayer?.isDead && localPlayer.respawnTime) {
-            renderDeathOverlay(ctx, canvas, localPlayer.respawnTime);
-          }
-
-          // Check for spawn protection
-          if (localPlayer?.spawnProtection && localPlayer.spawnProtection > 0) {
-            renderSpawnProtection(ctx, canvas, player);
-          }
-        }
-      } else {
-        // Solo mode: use client-side entities (NO BULLETS - using hitscan)
-        enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
-      }
+      // Draw enemies (solo mode only - client-side)
+      enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
 
       // Draw lasers
       if (game.lasers) {
@@ -1343,12 +1005,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     tutorialText,
     wasdKeys,
     isPaused,
-    isMultiplayer,
-    remotePlayers,
-    matchState: multiplayerClient?.getMatchState(),
     startGame,
     startTutorialMode,
-    startMultiplayerGame,
     continTutorial,
     restartGame,
     selectUpgrade,

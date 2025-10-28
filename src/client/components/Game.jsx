@@ -1,24 +1,19 @@
 import { useRef, useState } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { soundManager } from '../lib/sound.js';
-import { multiplayerClient } from '../lib/multiplayer.js';
 import HUD from './HUD';
 import StartScreen from './StartScreen';
 import GameOver from './GameOver';
 import UpgradeScreen from './UpgradeScreen';
-import CoopUpgradeScreen from './CoopUpgradeScreen';
 import TutorialOverlay from './TutorialOverlay';
 import PauseMenu from './PauseMenu';
 import Controls from './Controls';
 import MuteButton from './MuteButton';
-import MatchmakingScreen from './MatchmakingScreen';
-import MatchEndScreen from './MatchEndScreen';
 import StatsModal from './StatsModal';
 import './Game.css';
 
 export default function Game() {
   const canvasRef = useRef(null);
-  const [showMatchmaking, setShowMatchmaking] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
   const {
@@ -29,32 +24,14 @@ export default function Game() {
     tutorialText,
     wasdKeys,
     isPaused,
-    isMultiplayer,
-    remotePlayers,
-    matchState,
     startGame,
     startTutorialMode,
-    startMultiplayerGame,
     continTutorial,
     restartGame,
     selectUpgrade,
     performDash,
     togglePause,
-  } = useGameLoop(canvasRef, multiplayerClient);
-
-  const handleStartMultiplayer = () => {
-    soundManager.play('uiClick');
-    setShowMatchmaking(true);
-  };
-
-  const handleMatchFound = () => {
-    setShowMatchmaking(false);
-    startMultiplayerGame();
-  };
-
-  const handleCancelMatchmaking = () => {
-    setShowMatchmaking(false);
-  };
+  } = useGameLoop(canvasRef);
 
   return (
     <div id="game-container">
@@ -63,33 +40,17 @@ export default function Game() {
       <div id="ui-overlay">
         {(gameState === 'playing' || gameState === 'tutorial') && (
           <>
-            <HUD 
-              {...hudData} 
-              isMultiplayer={isMultiplayer} 
-              playerCount={remotePlayers.length + 1}
-              teamLives={matchState?.teamLives}
-              maxTeamLives={matchState?.maxTeamLives}
-              waveEnemiesRemaining={matchState?.waveEnemiesRemaining}
-            />
+            <HUD {...hudData} />
             <div id="difficulty-badge">{difficultyBadge}</div>
           </>
         )}
 
         <div id="wave-info"></div>
 
-        {gameState === 'start' && !showMatchmaking && (
+        {gameState === 'start' && (
           <StartScreen
             onStartGame={startGame}
             onStartTutorial={startTutorialMode}
-            onStartMultiplayer={handleStartMultiplayer}
-          />
-        )}
-
-        {showMatchmaking && (
-          <MatchmakingScreen
-            onMatchFound={handleMatchFound}
-            onCancel={handleCancelMatchmaking}
-            multiplayerClient={multiplayerClient}
           />
         )}
 
@@ -103,15 +64,8 @@ export default function Game() {
           />
         )}
 
-        {gameState === 'upgrade' && !isMultiplayer && (
+        {gameState === 'upgrade' && (
           <UpgradeScreen upgrades={upgradeOptions} onSelectUpgrade={selectUpgrade} />
-        )}
-
-        {isMultiplayer && matchState?.showUpgradeScreen && matchState?.upgradeOptions && (
-          <CoopUpgradeScreen 
-            upgrades={matchState.upgradeOptions} 
-            onSelectUpgrade={selectUpgrade} 
-          />
         )}
 
         {gameState === 'tutorial' && tutorialText && (
@@ -131,16 +85,6 @@ export default function Game() {
               setShowStats(false);
               restartGame();
             }} 
-          />
-        )}
-
-        {matchState && matchState.status === 'finished' && (
-          <MatchEndScreen
-            wave={matchState.wave}
-            teamLives={matchState.teamLives}
-            players={matchState.players}
-            onPlayAgain={handleStartMultiplayer}
-            onMainMenu={restartGame}
           />
         )}
       </div>

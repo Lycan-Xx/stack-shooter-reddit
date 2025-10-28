@@ -3,15 +3,9 @@ import {
   InitResponse,
   IncrementResponse,
   DecrementResponse,
-  JoinMatchResponse,
-  MatchUpdateResponse,
-  LeaveMatchResponse,
-  GameAction,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
-import { MatchmakingService } from './core/matchmaking';
-import { GameEngine } from './core/gameEngine';
 import { LeaderboardService } from './core/leaderboard';
 
 const app = express();
@@ -135,8 +129,8 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
   }
 });
 
-// Multiplayer endpoints
-router.post<unknown, JoinMatchResponse>('/api/match/join', async (_req, res): Promise<void> => {
+// Leaderboard endpoints
+router.get('/api/leaderboard/global', async (_req, res): Promise<void> => {
   const { postId } = context;
   
   if (!postId) {
@@ -488,10 +482,6 @@ router.post('/api/match/upgrade', async (req, res): Promise<void> => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ success: false, error: errorMessage });
   }
-});
-
-// Leaderboard endpoints
-router.get('/api/leaderboard/global', async (_req, res): Promise<void> => {
   try {
     const leaderboard = await LeaderboardService.getGlobalLeaderboard();
     res.json({ success: true, leaderboard });
