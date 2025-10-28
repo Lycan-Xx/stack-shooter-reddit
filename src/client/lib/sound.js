@@ -11,28 +11,19 @@ class SoundManager {
   }
 
   load(key, url, volume = 1.0) {
-    const audio = new Audio(url);
-    audio.volume = this.volume * volume;
-    this.sounds[key] = { audio, baseVolume: volume };
+    // Completely disabled to avoid CSP violations in Reddit
+    // Do not create Audio objects with external URLs
+    return;
   }
 
   loadMusic(url) {
-    this.music = new Audio(url);
-    this.music.volume = this.musicVolume;
-    this.music.loop = true;
+    // Completely disabled to avoid CSP violations in Reddit
+    return;
   }
 
   play(key) {
-    if (!this.enabled || !this.sounds[key]) return;
-
-    try {
-      const sound = this.sounds[key].audio.cloneNode();
-      sound.volume = this.volume * this.sounds[key].baseVolume;
-      sound.play().catch(() => {}); // Ignore autoplay and CSP errors
-    } catch (error) {
-      // Silently fail if CSP blocks audio
-      console.debug('Audio blocked by CSP');
-    }
+    // Completely disabled to avoid CSP violations in Reddit
+    return;
   }
 
   playMusic() {

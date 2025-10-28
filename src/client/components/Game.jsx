@@ -6,6 +6,7 @@ import HUD from './HUD';
 import StartScreen from './StartScreen';
 import GameOver from './GameOver';
 import UpgradeScreen from './UpgradeScreen';
+import CoopUpgradeScreen from './CoopUpgradeScreen';
 import TutorialOverlay from './TutorialOverlay';
 import PauseMenu from './PauseMenu';
 import Controls from './Controls';
@@ -62,7 +63,14 @@ export default function Game() {
       <div id="ui-overlay">
         {(gameState === 'playing' || gameState === 'tutorial') && (
           <>
-            <HUD {...hudData} isMultiplayer={isMultiplayer} playerCount={remotePlayers.length + 1} />
+            <HUD 
+              {...hudData} 
+              isMultiplayer={isMultiplayer} 
+              playerCount={remotePlayers.length + 1}
+              teamLives={matchState?.teamLives}
+              maxTeamLives={matchState?.maxTeamLives}
+              waveEnemiesRemaining={matchState?.waveEnemiesRemaining}
+            />
             <div id="difficulty-badge">{difficultyBadge}</div>
           </>
         )}
@@ -95,8 +103,15 @@ export default function Game() {
           />
         )}
 
-        {gameState === 'upgrade' && (
+        {gameState === 'upgrade' && !isMultiplayer && (
           <UpgradeScreen upgrades={upgradeOptions} onSelectUpgrade={selectUpgrade} />
+        )}
+
+        {isMultiplayer && matchState?.showUpgradeScreen && matchState?.upgradeOptions && (
+          <CoopUpgradeScreen 
+            upgrades={matchState.upgradeOptions} 
+            onSelectUpgrade={selectUpgrade} 
+          />
         )}
 
         {gameState === 'tutorial' && tutorialText && (
@@ -121,7 +136,8 @@ export default function Game() {
 
         {matchState && matchState.status === 'finished' && (
           <MatchEndScreen
-            winner={matchState.winner}
+            wave={matchState.wave}
+            teamLives={matchState.teamLives}
             players={matchState.players}
             onPlayAgain={handleStartMultiplayer}
             onMainMenu={restartGame}

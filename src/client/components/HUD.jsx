@@ -13,9 +13,10 @@ export default function HUD({
   maxDashCooldown,
   isMultiplayer = false,
   playerCount = 1,
-  timeRemaining = 0,
+  teamLives = 3,
+  maxTeamLives = 3,
+  waveEnemiesRemaining = 0,
   vampireKills = 0,
-  playerKills = 0,
   powerUps = [],
 }) {
   const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
@@ -24,15 +25,8 @@ export default function HUD({
   const dashText =
     dashCooldown <= 0 ? 'DASH READY' : `COOLDOWN: ${Math.ceil(dashCooldown / 1000)}s`;
 
-  // Format time remaining (MM:SS)
-  const minutes = Math.floor(timeRemaining / 60000);
-  const seconds = Math.floor((timeRemaining % 60000) / 1000);
-  const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  
-  // Determine timer color based on remaining time
-  const isLowTime = timeRemaining < 60000; // Less than 1 minute
-  const isCriticalTime = timeRemaining < 30000; // Less than 30 seconds
-  const timerClass = isCriticalTime ? 'timer-critical' : isLowTime ? 'timer-warning' : 'timer-normal';
+  // Determine lives color
+  const livesClass = teamLives === 1 ? 'lives-critical' : teamLives === 2 ? 'lives-warning' : 'lives-normal';
 
   return (
     <>
@@ -47,17 +41,20 @@ export default function HUD({
         </div>
         {isMultiplayer ? (
           <>
-            <div className={`hud-item timer-display ${timerClass}`}>
-              <strong>⏱️</strong> <span className="timer-text">{timeText}</span>
+            <div className={`hud-item ${livesClass}`}>
+              <strong>❤️ Team Lives:</strong> <span>{teamLives}/{maxTeamLives}</span>
+            </div>
+            <div className="hud-item">
+              <strong>🌊 Wave:</strong> <span>{wave}</span>
+            </div>
+            <div className="hud-item">
+              <strong>🧛 Enemies:</strong> <span>{waveEnemiesRemaining}</span>
             </div>
             <div className="hud-item">
               <strong>🎮 Players:</strong> <span>{playerCount}</span>
             </div>
             <div className="hud-item">
-              <strong>👤 Kills:</strong> <span>{playerKills}</span>
-            </div>
-            <div className="hud-item">
-              <strong>🧛 Vampires:</strong> <span>{vampireKills}</span>
+              <strong>💀 Kills:</strong> <span>{vampireKills}</span>
             </div>
             <div className="hud-item">
               <strong>Score:</strong> <span id="score">{score}</span>
@@ -84,11 +81,12 @@ export default function HUD({
         )}
       </div>
 
-      {/* Large timer display for multiplayer */}
+      {/* Large wave display for multiplayer co-op */}
       {isMultiplayer && (
-        <div id="match-timer" className={timerClass}>
-          <div className="match-timer-label">MATCH TIME</div>
-          <div className="match-timer-value">{timeText}</div>
+        <div id="wave-display" className={livesClass}>
+          <div className="wave-display-label">WAVE</div>
+          <div className="wave-display-value">{wave}</div>
+          <div className="wave-display-enemies">{waveEnemiesRemaining} enemies left</div>
         </div>
       )}
 

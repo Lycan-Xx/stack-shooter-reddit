@@ -12,6 +12,7 @@ import {
   renderSpawnProtection,
 } from '../lib/serverEntityRenderer.js';
 import { HitMarker, DamageNumber, HitEffect, KillFeed } from '../lib/visualEffects.js';
+import { loadImageWithFallback } from '../lib/imageLoader.js';
 
 export function useGameLoop(canvasRef, multiplayerClient) {
   const [gameState, setGameState] = useState('start');
@@ -99,10 +100,18 @@ export function useGameLoop(canvasRef, multiplayerClient) {
   const imagesRef = useRef({
     playerAvatar: new Image(), // Current player's Snoo
     remoteAvatars: new Map(), // Remote players' Snoos
+    vampire: new Image(), // Vampire enemy image
   });
   const cursorLockRef = useRef({ locked: false, requested: false });
 
   useEffect(() => {
+    // Load vampire image with fallback
+    loadImageWithFallback('https://play.rosebud.ai/assets/Vampire Enemy.png?0u3E', 'vampire')
+      .then(img => {
+        imagesRef.current.vampire = img;
+      })
+      .catch(err => console.error('Error loading vampire image:', err));
+
     // Load current user's Snoo avatar (primary player image)
     fetch('/api/init')
       .then(res => res.json())
@@ -140,18 +149,16 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const game = gameRef.current;
 
     // Get match state if in multiplayer
-    let timeRemaining = 0;
     let vampireKills = 0;
-    let playerKills = 0;
+    let wave = game.wave;
 
     if (game.isMultiplayer && multiplayerClient) {
       const matchState = multiplayerClient.getMatchState();
       if (matchState) {
-        timeRemaining = matchState.timeRemaining || 0;
+        wave = matchState.wave || 1;
         const localPlayer = matchState.players?.find((p) => p.id === multiplayerClient.playerId);
         if (localPlayer) {
           vampireKills = localPlayer.vampireKills || 0;
-          playerKills = localPlayer.kills || 0;
         }
       }
     }
@@ -159,7 +166,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     setHudData({
       health: player.health,
       maxHealth: player.maxHealth,
-      wave: game.wave,
+      wave,
       enemies: enemiesRef.current.length,
       kills: game.kills,
       score: game.score,
@@ -167,9 +174,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       maxDashEnergy: player.maxDashEnergy,
       dashCooldown: player.dashCooldown,
       maxDashCooldown: player.maxDashCooldown,
-      timeRemaining,
       vampireKills,
-      playerKills,
       powerUps: player.powerUps || [],
     });
   };
@@ -268,6 +273,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     const player = playerRef.current;
     const mouse = mouseRef.current;
     const game = gameRef.current;
+    const canvas = canvasRef.current;
     const now = Date.now();
 
     // Check fire rate with power-up bonus
@@ -282,8 +288,9 @@ export function useGameLoop(canvasRef, multiplayerClient) {
 
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-    // In multiplayer, send to server for validation
+    // HITSCAN: Instant laser hit detection
     if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+      // Send hitscan to server
       multiplayerClient.sendShoot(
         player.x,
         player.y,
@@ -292,15 +299,95 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         player.weapon.piercing
       );
     } else {
-      // Solo mode: create bullet client-side
-      bulletsRef.current.push(
-        new Bullet(player.x, player.y, angle, game.difficulty, player.weapon.piercing)
-      );
+      // Solo mode: instant hitscan with improved line-circle intersection
+      const maxRange = 2000;
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+      
+      // Check hits against enemies
+      let pierceCount = player.weapon.piercing;
+      const hitEnemies = [];
+      
+      console.log(`[HITSCAN] Checking ${enemiesRef.current.length} enemies`);
+      
+      for (const enemy of enemiesRef.current) {
+        // Vector from player to enemy
+        const toEnemyX = enemy.x - player.x;
+        const toEnemyY = enemy.y - player.y;
+        
+        // Project enemy position onto laser direction
+        const projection = toEnemyX * dirX + toEnemyY * dirY;
+        
+        // Enemy must be in front of player
+        if (projection < 0) continue;
+        
+        // Find closest point on laser line to enemy
+        const closestX = player.x + dirX * projection;
+        const closestY = player.y + dirY * projection;
+        
+        // Distance from enemy to closest point on line
+        const distX = enemy.x - closestX;
+        const distY = enemy.y - closestY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+        
+        // Check if laser passes through enemy (within radius)
+        if (distance <= enemy.radius) {
+          console.log(`[HITSCAN] HIT enemy at (${enemy.x}, ${enemy.y}), distance: ${distance}`);
+          hitEnemies.push(enemy);
+        }
+      }
+      
+      console.log(`[HITSCAN] Total hits: ${hitEnemies.length}`);
+      
+      // Apply damage to hit enemies
+      for (const enemy of hitEnemies) {
+        const killed = enemy.hit(player.weapon.damage);
+        
+        if (killed) {
+          soundManager.play('enemyDeath');
+          soundManager.play('scorePoint');
+          game.kills++;
+          game.score += enemy.scoreValue;
+          enemiesRef.current = enemiesRef.current.filter(e => e !== enemy);
+          
+          bloodSplattersRef.current.push(new BloodSplatter(enemy.x, enemy.y));
+          
+          for (let k = 0; k < 15; k++) {
+            particlesRef.current.push(new Particle(enemy.x, enemy.y, '#8b0000'));
+          }
+          
+          showFloatingText(enemy.x, enemy.y, `+${enemy.scoreValue}`, '#ffff00');
+        } else {
+          soundManager.play('enemyHit');
+        }
+        
+        pierceCount--;
+        if (pierceCount < 0) break;
+      }
+      
+      updateHUD();
     }
 
     soundManager.play('shoot');
 
-    for (let i = 0; i < 5; i++) {
+    // Visual laser effect
+    const laserLength = 1000;
+    const laserEndX = player.x + Math.cos(angle) * laserLength;
+    const laserEndY = player.y + Math.sin(angle) * laserLength;
+    
+    // Store laser for rendering
+    if (!game.lasers) game.lasers = [];
+    game.lasers.push({
+      startX: player.x,
+      startY: player.y,
+      endX: laserEndX,
+      endY: laserEndY,
+      alpha: 1,
+      createdAt: now
+    });
+
+    // Muzzle flash particles
+    for (let i = 0; i < 3; i++) {
       particlesRef.current.push(
         new Particle(player.x + Math.cos(angle) * 20, player.y + Math.sin(angle) * 20, '#ffaa00')
       );
@@ -358,19 +445,38 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     setGameState('upgrade');
   };
 
-  const selectUpgrade = (upgradeKey) => {
+  const selectUpgrade = async (upgradeKey) => {
     const player = playerRef.current;
     const game = gameRef.current;
 
+    // Apply upgrade locally
     applyUpgrade(player, player.upgrades, upgradeKey);
-    setGameState('playing');
-    game.state = 'playing';
 
-    setTimeout(() => {
-      game.wave++;
-      updateHUD();
-      spawnWave();
-    }, 500);
+    // In multiplayer, notify server
+    if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
+      try {
+        await fetch('/api/match/upgrade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playerId: multiplayerClient.playerId,
+            upgradeId: upgradeKey,
+          }),
+        });
+      } catch (error) {
+        console.error('Error sending upgrade selection:', error);
+      }
+    } else {
+      // Solo mode
+      setGameState('playing');
+      game.state = 'playing';
+
+      setTimeout(() => {
+        game.wave++;
+        updateHUD();
+        spawnWave();
+      }, 500);
+    }
   };
 
   const initGame = () => {
@@ -547,8 +653,8 @@ export function useGameLoop(canvasRef, multiplayerClient) {
     // Sync multiplayer state
     if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
       const now = Date.now();
-      if (now - game.lastPositionSync > 50) {
-        // Sync position every 50ms
+      if (now - game.lastPositionSync > 150) {
+        // Sync position every 150ms (optimized for less lag)
         multiplayerClient.sendPosition(player.x, player.y, player.angle, player.isDashing);
         game.lastPositionSync = now;
       }
@@ -710,60 +816,12 @@ export function useGameLoop(canvasRef, multiplayerClient) {
       shoot();
     }
 
-    const bullets = bulletsRef.current;
     const enemies = enemiesRef.current;
     const particles = particlesRef.current;
     const bloodSplatters = bloodSplattersRef.current;
     const floatingTexts = floatingTextsRef.current;
 
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      if (!bullets[i].update(canvas)) {
-        bullets.splice(i, 1);
-      }
-    }
-
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      const bullet = bullets[i];
-
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        const enemy = enemies[j];
-        const dx = bullet.x - enemy.x;
-        const dy = bullet.y - enemy.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < bullet.radius + enemy.radius) {
-          const killed = enemy.hit(bullet.damage);
-
-          if (killed) {
-            soundManager.play('enemyDeath');
-            soundManager.play('scorePoint');
-            game.kills++;
-            game.score += enemy.scoreValue;
-            enemies.splice(j, 1);
-
-            bloodSplatters.push(new BloodSplatter(enemy.x, enemy.y));
-
-            for (let k = 0; k < 15; k++) {
-              particles.push(new Particle(enemy.x, enemy.y, '#8b0000'));
-            }
-
-            showFloatingText(enemy.x, enemy.y, `+${enemy.scoreValue}`, '#ffff00');
-          } else {
-            soundManager.play('enemyHit');
-          }
-
-          if (!bullet.piercing || bullet.piercing <= 0) {
-            bullets.splice(i, 1);
-            updateHUD();
-            break;
-          } else {
-            bullet.piercing--;
-          }
-
-          updateHUD();
-        }
-      }
-    }
+    // Bullet collision is now handled in shoot() function via hitscan
 
     for (let i = enemies.length - 1; i >= 0; i--) {
       if (enemies[i]) {
@@ -1051,8 +1109,7 @@ export function useGameLoop(canvasRef, multiplayerClient) {
         const matchState = multiplayerClient.getMatchState();
 
         if (matchState) {
-          // Draw server-managed entities
-          renderServerBullets(ctx, matchState.bullets);
+          // Draw server-managed entities (NO BULLETS - using hitscan)
           renderServerVampires(ctx, matchState.vampires, null); // No image, use circles
           renderPowerUps(ctx, matchState.powerUps);
 
@@ -1068,9 +1125,33 @@ export function useGameLoop(canvasRef, multiplayerClient) {
           }
         }
       } else {
-        // Solo mode: use client-side entities
-        bulletsRef.current.forEach((bullet) => bullet.draw(ctx));
+        // Solo mode: use client-side entities (NO BULLETS - using hitscan)
         enemiesRef.current.forEach((enemy) => enemy.draw(ctx));
+      }
+
+      // Draw lasers
+      if (game.lasers) {
+        const now = Date.now();
+        game.lasers = game.lasers.filter(laser => {
+          const age = now - laser.createdAt;
+          if (age > 100) return false; // Laser lasts 100ms
+          
+          laser.alpha = 1 - (age / 100);
+          
+          ctx.save();
+          ctx.globalAlpha = laser.alpha;
+          ctx.strokeStyle = '#ffff00';
+          ctx.lineWidth = 3;
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#ffff00';
+          ctx.beginPath();
+          ctx.moveTo(laser.startX, laser.startY);
+          ctx.lineTo(laser.endX, laser.endY);
+          ctx.stroke();
+          ctx.restore();
+          
+          return true;
+        });
       }
 
       // Always draw particles and effects

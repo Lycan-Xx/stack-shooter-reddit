@@ -392,3 +392,122 @@
     font-size: 32px;
   }
 }
+
+/* Co-op lives display */
+.lives-normal {
+  color: #4caf50;
+}
+
+.lives-warning {
+  color: #ff9800;
+  animation: lives-pulse 1s ease-in-out infinite;
+}
+
+.lives-critical {
+  color: #f44336;
+  animation: lives-pulse-fast 0.5s ease-in-out infinite;
+}
+
+@keyframes lives-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes lives-pulse-fast {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+/* Large wave display for co-op */
+#wave-display {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  padding: 15px 30px;
+  border-radius: 12px;
+  text-align: center;
+  z-index: 100;
+  transition: all 0.3s ease;
+  border: 3px solid #4a90e2;
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+}
+
+#wave-display.lives-warning {
+  border-color: #ff9800;
+  box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+}
+
+#wave-display.lives-critical {
+  border-color: #f44336;
+  box-shadow: 0 0 30px rgba(244, 67, 54, 0.7);
+  animation: wave-pulse 0.5s ease-in-out infinite;
+}
+
+.wave-display-label {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+  color: #4a90e2;
+  opacity: 0.8;
+}
+
+.wave-display-value {
+  font-size: 48px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  color: #4a90e2;
+  text-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
+}
+
+.wave-display-enemies {
+  font-size: 14px;
+  color: #aaa;
+  margin-top: 5px;
+}
+
+#wave-display.lives-critical .wave-display-value {
+  color: #f44336;
+}
+
+#wave-display.lives-critical .wave-display-label {
+  color: #f44336;
+}
+
+@keyframes wave-pulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+@media (max-width: 768px) {
+  #wave-display {
+    top: 10px;
+    padding: 10px 20px;
+  }
+  
+  .wave-display-label {
+    font-size: 10px;
+  }
+  
+  .wave-display-value {
+    font-size: 32px;
+  }
+  
+  .wave-display-enemies {
+    font-size: 12px;
+  }
+}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Leaderboard from './Leaderboard';
 import './StartScreen.css';
 
-export default function StartScreen({ onStartGame, onStartTutorial, onStartMultiplayer }) {
+export default function StartScreen({ onStartGame, onStartTutorial }) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [communityStats, setCommunityStats] = useState(null);
   const [playerStats, setPlayerStats] = useState(null);
@@ -70,10 +70,6 @@ export default function StartScreen({ onStartGame, onStartTutorial, onStartMulti
         </div>
 
         <div className="menu-buttons">
-          <button className="btn multiplayer-btn" onClick={onStartMultiplayer}>
-            🎮 Multiplayer (2-12 Players)
-          </button>
-
           <button className="btn leaderboard-btn" onClick={() => setShowLeaderboard(true)}>
             🏆 View Leaderboards
           </button>
@@ -82,7 +78,7 @@ export default function StartScreen({ onStartGame, onStartTutorial, onStartMulti
             📚 Play Tutorial
           </button>
 
-          <p style={{ fontSize: '18px', margin: '20px 0 10px 0' }}>Solo Play - Select Difficulty:</p>
+          <p style={{ fontSize: '18px', margin: '20px 0 10px 0' }}>Select Difficulty:</p>
           <div className="difficulty-buttons">
             <button className="btn difficulty-btn" onClick={() => onStartGame('easy')}>
               😊 Easy
