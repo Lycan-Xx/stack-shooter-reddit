@@ -3,7 +3,7 @@ import { DIFFICULTY } from './difficulty.js';
 import { soundManager } from './sound.js';
 
 export class Vampire {
-  constructor(x, y, wave, difficulty, images, player) {
+  constructor(x, y, wave, difficulty, images, player, challengeData = null) {
     this.x = x;
     this.y = y;
     this.radius = 30;
@@ -11,15 +11,29 @@ export class Vampire {
     this.images = images;
     this.player = player;
 
-    const diff = DIFFICULTY[difficulty];
-    this.health = diff.enemyHealth + Math.floor((wave - 1) * 5);
+    const diff = difficulty === 'challenge' ? DIFFICULTY.normal : DIFFICULTY[difficulty];
+    
+    // Apply challenge modifiers if in challenge mode
+    let healthMult = 1.0;
+    let speedMult = 1.0;
+    let scoreMult = diff.scoreMultiplier;
+    
+    if (challengeData && challengeData.modifiers) {
+      challengeData.modifiers.forEach(mod => {
+        if (mod.effect.enemyHealthMultiplier) healthMult *= mod.effect.enemyHealthMultiplier;
+        if (mod.effect.enemySpeedMultiplier) speedMult *= mod.effect.enemySpeedMultiplier;
+        if (mod.effect.scoreMultiplier) scoreMult *= mod.effect.scoreMultiplier;
+      });
+    }
+    
+    this.health = (diff.enemyHealth + Math.floor((wave - 1) * 5)) * healthMult;
     this.maxHealth = this.health;
-    this.speed = diff.enemySpeed + Math.min((wave - 1) * 0.03, 0.5);
+    this.speed = (diff.enemySpeed + Math.min((wave - 1) * 0.03, 0.5)) * speedMult;
     this.damage = diff.enemyDamage;
     this.color = '#8b0000';
     this.lastAttack = 0;
     this.attackRate = 1000;
-    this.scoreValue = 10 * diff.scoreMultiplier;
+    this.scoreValue = 10 * scoreMult;
   }
 
   update(canvas, updateHUD, gameOver) {

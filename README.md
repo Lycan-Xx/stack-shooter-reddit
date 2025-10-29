@@ -1,6 +1,6 @@
-## 🧛 Vampire Siege
+## 🧛 Stack Shooter: Vampire Siege
 
-An intense top-down shooter game built for Reddit's Devvit platform. Defend against endless waves of vampires, collect powerful upgrades, and hold your ground as long as you can in this fast-paced survival shooter.
+An intense top-down survival shooter game built for Reddit's Devvit platform. Defend against endless waves of vampires, collect powerful upgrades, and hold your ground as long as you can in this fast-paced action game.
 
 ### What Makes This Game Unique
 

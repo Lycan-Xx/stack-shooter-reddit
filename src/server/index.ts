@@ -7,6 +7,7 @@ import {
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { LeaderboardService } from './core/leaderboard';
+import { ChallengeService } from './core/challenges';
 
 const app = express();
 
@@ -129,359 +130,51 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
   }
 });
 
-// Leaderboard endpoints
-router.get('/api/leaderboard/global', async (_req, res): Promise<void> => {
-  const { postId } = context;
+// Submit score to leaderboard
+router.post('/api/score/submit', async (req, res): Promise<void> => {
+  const { subredditName } = context;
+  const { score, wave, kills, difficulty } = req.body as {
+    score: number;
+    wave: number;
+    kills: number;
+    difficulty: string;
+  };
   
-  if (!postId) {
-    res.status(400).json({
-      success: false,
-      matchId: '',
-      playerId: '',
-      username: '',
-      queuePosition: 0,
-    });
+  if (!subredditName) {
+    res.status(400).json({ success: false });
     return;
   }
 
   try {
     const username = await reddit.getCurrentUsername();
-    
     if (!username) {
-      console.error('Failed to get username from Reddit');
-      res.status(400).json({
-        success: false,
-        matchId: '',
-        playerId: '',
-        username: 'anonymous',
-        queuePosition: 0,
-      });
+      res.status(400).json({ success: false });
       return;
     }
-    
-    console.log(`Player joining match: ${username}`);
-    const result = await MatchmakingService.joinMatch(postId, username);
-    
-    res.json({
-      success: true,
-      matchId: result.matchId,
-      playerId: result.playerId,
+
+    // Log game completion for analytics
+    console.log(`Game completed: ${username} - Wave ${wave}, ${kills} kills, ${difficulty} difficulty, Score: ${score}`);
+
+    await LeaderboardService.saveMatchResult(
       username,
-      queuePosition: result.queuePosition,
-      estimatedWait: result.queuePosition > 0 ? 15 : 0,
-    });
+      subredditName,
+      score,
+      kills,
+      kills,
+      false
+    );
+
+    const rank = await LeaderboardService.getPlayerRank(username);
+    
+    res.json({ success: true, rank });
   } catch (error) {
-    console.error('Error joining match:', error);
-    res.status(500).json({
-      success: false,
-      matchId: '',
-      playerId: '',
-      username: '',
-    });
-  }
-});
-
-router.get<unknown, MatchUpdateResponse>('/api/match/state', async (req, res): Promise<void> => {
-  const { postId } = context;
-  const since = parseInt((req.query.since as string) || '0');
-  
-  if (!postId) {
-    res.status(400).json({
-      match: null as any,
-      actions: [],
-    });
-    return;
-  }
-
-  try {
-    const match = await MatchmakingService.getMatch(postId);
-    const actions = await MatchmakingService.getActions(postId, since);
-    
-    res.json({
-      match: match as any,
-      actions,
-    });
-  } catch (error) {
-    console.error('Error getting match state:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error details:', errorMessage);
-    res.status(500).json({
-      match: null as any,
-      actions: [],
-    });
-  }
-});
-
-router.post('/api/match/action', async (req, res): Promise<void> => {
-  const { postId } = context;
-  
-  if (!postId) {
-    res.status(400).json({ success: false, error: 'No post ID' });
-    return;
-  }
-
-  try {
-    const action: GameAction = req.body;
-    
-    if (!action || !action.type || !action.playerId) {
-      res.status(400).json({ success: false, error: 'Invalid action' });
-      return;
-    }
-    
-    action.timestamp = Date.now();
-    
-    // Check if match exists before broadcasting
-    const matchKey = `match:${postId}:current`;
-    const matchData = await redis.get(matchKey);
-    
-    if (!matchData) {
-      res.status(404).json({ success: false, error: 'Match not found' });
-      return;
-    }
-    
-    await MatchmakingService.broadcastAction(postId, action);
-    
-    // Update player state if it's a move action
-    if (action.type === 'move' && action.data) {
-      const updated = await MatchmakingService.updatePlayerState(postId, action.playerId, {
-        x: action.data.x,
-        y: action.data.y,
-        angle: action.data.angle,
-        isDashing: action.data.isDashing,
-      });
-      
-      if (!updated) {
-        console.warn(`Player ${action.playerId} not found in match`);
-      }
-    }
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error broadcasting action:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ success: false, error: errorMessage });
-  }
-});
-
-router.post<unknown, LeaveMatchResponse>('/api/match/leave', async (req, res): Promise<void> => {
-  const { postId } = context;
-  const { playerId } = req.body as { playerId: string };
-  
-  if (!postId || !playerId) {
-    res.status(400).json({ success: false });
-    return;
-  }
-
-  try {
-    const success = await MatchmakingService.leaveMatch(postId, playerId);
-    res.json({ success });
-  } catch (error) {
-    console.error('Error leaving match:', error);
+    console.error('Error submitting score:', error);
     res.status(500).json({ success: false });
   }
 });
 
-router.post('/api/match/start', async (_req, res): Promise<void> => {
-  const { postId } = context;
-  
-  if (!postId) {
-    res.status(400).json({ success: false });
-    return;
-  }
-
-  try {
-    const success = await MatchmakingService.startMatch(postId);
-    res.json({ success });
-  } catch (error) {
-    console.error('Error starting match:', error);
-    res.status(500).json({ success: false });
-  }
-});
-
-router.post('/api/match/tick', async (_req, res): Promise<void> => {
-  const { postId, subredditName } = context;
-  
-  if (!postId) {
-    res.status(400).json({ success: false, error: 'No post ID' });
-    return;
-  }
-
-  try {
-    const matchKey = `match:${postId}:current`;
-    const matchData = await redis.get(matchKey);
-    
-    if (!matchData) {
-      res.status(404).json({ success: false, error: 'Match not found' });
-      return;
-    }
-    
-    const match = JSON.parse(matchData);
-    
-    if (!match || match.status !== 'playing') {
-      res.json({ success: false, error: 'Match not playing', status: match?.status });
-      return;
-    }
-
-    // Create game engine and tick with 100ms delta time (optimized for less lag)
-    const engine = new GameEngine(match.matchId, postId, match, subredditName || 'unknown');
-    const updatedState = engine.tick(100); // 100ms tick for 10 ticks/second
-
-    // Save updated state
-    await redis.set(matchKey, JSON.stringify(updatedState));
-
-    res.json({ success: true, state: updatedState });
-  } catch (error) {
-    console.error('Error ticking match:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : '';
-    console.error('Error stack:', errorStack);
-    res.status(500).json({ success: false, error: errorMessage });
-  }
-});
-
-router.post('/api/match/shoot', async (req, res): Promise<void> => {
-  const { postId } = context;
-  const { playerId, x, y, angle, damage, piercing } = req.body as {
-    playerId: string;
-    x: number;
-    y: number;
-    angle: number;
-    damage: number;
-    piercing: number;
-  };
-  
-  console.log(`Shoot request: player=${playerId}, x=${x}, y=${y}, angle=${angle}`);
-  
-  if (!postId || !playerId) {
-    console.log('Missing postId or playerId');
-    res.status(400).json({ success: false });
-    return;
-  }
-
-  try {
-    const matchKey = `match:${postId}:current`;
-    const matchData = await redis.get(matchKey);
-    
-    if (!matchData) {
-      console.log('No match found');
-      res.json({ success: false, error: 'No match found' });
-      return;
-    }
-
-    const match = JSON.parse(matchData);
-    
-    if (match.status !== 'playing') {
-      console.log(`Match not playing, status: ${match.status}`);
-      res.json({ success: false, error: 'Match not playing' });
-      return;
-    }
-
-    console.log(`Processing hitscan, vampires count: ${match.vampires?.length || 0}`);
-
-    // SERVER-SIDE HITSCAN: Instant hit detection
-    const maxRange = 2000;
-    const endX = x + Math.cos(angle) * maxRange;
-    const endY = y + Math.sin(angle) * maxRange;
-    
-    let pierceCount = piercing;
-    const hitVampires = [];
-    
-    // Check which vampires are hit by the laser
-    for (const vampire of match.vampires || []) {
-      // Line-circle intersection
-      const dx = vampire.x - x;
-      const dy = vampire.y - y;
-      const fx = endX - x;
-      const fy = endY - y;
-      
-      const a = fx * fx + fy * fy;
-      const b = 2 * (fx * dx + fy * dy);
-      const c = dx * dx + dy * dy - 25 * 25; // vampire radius = 25
-      
-      const discriminant = b * b - 4 * a * c;
-      
-      if (discriminant >= 0) {
-        const t = (-b - Math.sqrt(discriminant)) / (2 * a);
-        if (t >= 0 && t <= 1) {
-          hitVampires.push(vampire);
-        }
-      }
-    }
-    
-    // Apply damage to hit vampires
-    let killCount = 0;
-    for (const vampire of hitVampires) {
-      vampire.health -= damage;
-      
-      if (vampire.health <= 0) {
-        // Remove vampire
-        match.vampires = match.vampires.filter((v: any) => v.id !== vampire.id);
-        match.waveEnemiesRemaining = Math.max(0, match.waveEnemiesRemaining - 1);
-        
-        // Award points to shooter
-        const shooter = match.players.find((p: any) => p.id === playerId);
-        if (shooter) {
-          shooter.vampireKills = (shooter.vampireKills || 0) + 1;
-          shooter.score = (shooter.score || 0) + 10;
-        }
-        
-        killCount++;
-      }
-      
-      pierceCount--;
-      if (pierceCount < 0) break;
-    }
-
-    // Save updated state
-    await redis.set(matchKey, JSON.stringify(match));
-
-    console.log(`Hitscan complete: ${hitVampires.length} hits, ${killCount} kills, ${match.vampires.length} vampires remaining`);
-
-    res.json({ success: true, hits: hitVampires.length, kills: killCount });
-  } catch (error) {
-    console.error('Error processing hitscan:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ success: false, error: errorMessage });
-  }
-});
-
-router.post('/api/match/upgrade', async (req, res): Promise<void> => {
-  const { postId } = context;
-  const { playerId, upgradeId } = req.body as {
-    playerId: string;
-    upgradeId: string;
-  };
-  
-  if (!postId || !playerId || !upgradeId) {
-    res.status(400).json({ success: false });
-    return;
-  }
-
-  try {
-    const matchKey = `match:${postId}:current`;
-    const matchData = await redis.get(matchKey);
-    
-    if (!matchData) {
-      res.json({ success: false, error: 'No match found' });
-      return;
-    }
-
-    const match = JSON.parse(matchData);
-    
-    // Apply upgrade via game engine
-    const engine = new GameEngine(match.matchId, postId, match, context.subredditName || 'unknown');
-    engine.applyUpgrade(upgradeId);
-    const updatedState = engine.getState();
-
-    // Save updated state
-    await redis.set(matchKey, JSON.stringify(updatedState));
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error applying upgrade:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ success: false, error: errorMessage });
-  }
+// Leaderboard endpoints
+router.get('/api/leaderboard/global', async (_req, res): Promise<void> => {
   try {
     const leaderboard = await LeaderboardService.getGlobalLeaderboard();
     res.json({ success: true, leaderboard });
@@ -559,6 +252,135 @@ router.get('/api/stats/community', async (_req, res): Promise<void> => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('Error getting community stats:', error);
+    res.status(500).json({ success: false, stats: null });
+  }
+});
+
+// Daily Challenge endpoints
+router.get('/api/challenge/daily', async (_req, res): Promise<void> => {
+  try {
+    const challenge = await ChallengeService.getDailyChallenge();
+    res.json({ success: true, challenge });
+  } catch (error) {
+    console.error('Error getting daily challenge:', error);
+    res.status(500).json({ success: false, challenge: null });
+  }
+});
+
+router.post('/api/challenge/submit', async (req, res): Promise<void> => {
+  const { score, wave, kills, date } = req.body as {
+    score: number;
+    wave: number;
+    kills: number;
+    date: string;
+  };
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, rank: 0 });
+      return;
+    }
+
+    const rank = await ChallengeService.submitChallengeScore(username, date, score, wave, kills);
+
+    res.json({ success: true, rank });
+  } catch (error) {
+    console.error('Error submitting challenge score:', error);
+    res.status(500).json({ success: false, rank: 0 });
+  }
+});
+
+router.get('/api/challenge/leaderboard', async (req, res): Promise<void> => {
+  const date = (req.query.date as string | undefined) || new Date().toISOString().split('T')[0];
+
+  try {
+    const leaderboard = await ChallengeService.getChallengeLeaderboard(date);
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting challenge leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/challenge/stats', async (req, res): Promise<void> => {
+  const date = (req.query.date as string | undefined) || new Date().toISOString().split('T')[0];
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, stats: null });
+      return;
+    }
+
+    const stats = await ChallengeService.getPlayerChallengeStats(username, date);
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error getting challenge stats:', error);
+    res.status(500).json({ success: false, stats: null });
+  }
+});
+
+// Daily Challenge endpoints
+router.get('/api/challenge/daily', async (_req, res): Promise<void> => {
+  try {
+    const challenge = await ChallengeService.getDailyChallenge();
+    res.json({ success: true, challenge });
+  } catch (error) {
+    console.error('Error getting daily challenge:', error);
+    res.status(500).json({ success: false, challenge: null });
+  }
+});
+
+router.post('/api/challenge/submit', async (req, res): Promise<void> => {
+  const { score, wave, kills, date } = req.body as {
+    score: number;
+    wave: number;
+    kills: number;
+    date: string;
+  };
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, rank: 0 });
+      return;
+    }
+
+    const rank = await ChallengeService.submitChallengeScore(username, date, score, wave, kills);
+    res.json({ success: true, rank });
+  } catch (error) {
+    console.error('Error submitting challenge score:', error);
+    res.status(500).json({ success: false, rank: 0 });
+  }
+});
+
+router.get('/api/challenge/leaderboard', async (req, res): Promise<void> => {
+  const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
+
+  try {
+    const leaderboard = await ChallengeService.getChallengeLeaderboard(date);
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting challenge leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
+  }
+});
+
+router.get('/api/challenge/stats', async (req, res): Promise<void> => {
+  const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, stats: null });
+      return;
+    }
+
+    const stats = await ChallengeService.getPlayerChallengeStats(username, date);
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error getting challenge stats:', error);
     res.status(500).json({ success: false, stats: null });
   }
 });

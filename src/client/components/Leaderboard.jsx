@@ -4,22 +4,19 @@ import './Leaderboard.css';
 export default function Leaderboard({ onClose }) {
   const [activeTab, setActiveTab] = useState('global');
   const [leaderboard, setLeaderboard] = useState([]);
-  const [playerStats, setPlayerStats] = useState(null);
-  const [playerRank, setPlayerRank] = useState(0);
-  const [communityStats, setCommunityStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [playerStats, setPlayerStats] = useState(null);
+  const [playerRank, setPlayerRank] = useState(null);
 
   useEffect(() => {
     loadLeaderboard();
     loadPlayerStats();
-    loadCommunityStats();
   }, [activeTab]);
 
   const loadLeaderboard = async () => {
     setLoading(true);
     try {
-      const endpoint = `/api/leaderboard/${activeTab}`;
-      const response = await fetch(endpoint);
+      const response = await fetch(`/api/leaderboard/${activeTab}`);
       const data = await response.json();
       
       if (data.success) {
@@ -27,8 +24,9 @@ export default function Leaderboard({ onClose }) {
       }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadPlayerStats = async () => {
@@ -38,140 +36,78 @@ export default function Leaderboard({ onClose }) {
       
       if (data.success) {
         setPlayerStats(data.stats);
-        setPlayerRank(data.rank || 0);
+        setPlayerRank(data.rank);
       }
     } catch (error) {
       console.error('Error loading player stats:', error);
     }
   };
 
-  const loadCommunityStats = async () => {
-    try {
-      const response = await fetch('/api/stats/community');
-      const data = await response.json();
-      
-      if (data.success) {
-        setCommunityStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Error loading community stats:', error);
-    }
+  const getTabLabel = (tab) => {
+    const labels = {
+      global: '🌍 Global',
+      subreddit: '📍 Subreddit',
+      daily: '📅 Daily',
+      weekly: '📆 Weekly'
+    };
+    return labels[tab] || tab;
   };
 
-  const formatNumber = (num) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
+  const getMedalEmoji = (rank) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
   };
 
   return (
     <div className="leaderboard-overlay">
       <div className="leaderboard-modal">
-        <button className="close-btn" onClick={onClose}>×</button>
-        
-        <h2>🏆 Leaderboards</h2>
-
-        {/* Player Stats Card */}
-        {playerStats && (
-          <div className="player-stats-card">
-            <div className="stat-row">
-              <span className="stat-label">Your Rank:</span>
-              <span className="stat-value">#{playerRank || 'Unranked'}</span>
-            </div>
-            <div className="stat-row">
-              <span className="stat-label">Best Score:</span>
-              <span className="stat-value">{formatNumber(playerStats.bestScore)}</span>
-            </div>
-            <div className="stat-row">
-              <span className="stat-label">K/D Ratio:</span>
-              <span className="stat-value">{playerStats.kdRatio.toFixed(2)}</span>
-            </div>
-            <div className="stat-row">
-              <span className="stat-label">Total Wins:</span>
-              <span className="stat-value">{playerStats.totalWins}/{playerStats.totalMatches}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Community Stats */}
-        {communityStats && (
-          <div className="community-stats">
-            <h3>🧛 Community Stats</h3>
-            <div className="stats-grid">
-              <div className="stat-box">
-                <div className="stat-number">{formatNumber(communityStats.totalVampiresKilled)}</div>
-                <div className="stat-label">Vampires Slain</div>
-              </div>
-              <div className="stat-box">
-                <div className="stat-number">{formatNumber(communityStats.totalMatches)}</div>
-                <div className="stat-label">Matches Played</div>
-              </div>
-              <div className="stat-box">
-                <div className="stat-number">{formatNumber(communityStats.weeklyVampires)}</div>
-                <div className="stat-label">This Week</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="leaderboard-tabs">
-          <button 
-            className={activeTab === 'global' ? 'active' : ''} 
-            onClick={() => setActiveTab('global')}
-          >
-            🌍 Global
-          </button>
-          <button 
-            className={activeTab === 'subreddit' ? 'active' : ''} 
-            onClick={() => setActiveTab('subreddit')}
-          >
-            📍 Subreddit
-          </button>
-          <button 
-            className={activeTab === 'daily' ? 'active' : ''} 
-            onClick={() => setActiveTab('daily')}
-          >
-            📅 Daily
-          </button>
-          <button 
-            className={activeTab === 'weekly' ? 'active' : ''} 
-            onClick={() => setActiveTab('weekly')}
-          >
-            📆 Weekly
-          </button>
+        <div className="leaderboard-header">
+          <h2>🏆 Leaderboard</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
-        {/* Leaderboard Table */}
-        <div className="leaderboard-table">
+        <div className="leaderboard-tabs">
+          {['global', 'subreddit', 'daily', 'weekly'].map(tab => (
+            <button
+              key={tab}
+              className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {getTabLabel(tab)}
+            </button>
+          ))}
+        </div>
+
+        {playerStats && playerRank && (
+          <div className="player-rank-card">
+            <div className="rank-badge">{getMedalEmoji(playerRank)}</div>
+            <div className="rank-info">
+              <div className="rank-label">Your Rank</div>
+              <div className="rank-score">{playerStats.bestScore.toLocaleString()} pts</div>
+            </div>
+          </div>
+        )}
+
+        <div className="leaderboard-content">
           {loading ? (
             <div className="loading">Loading...</div>
           ) : leaderboard.length === 0 ? (
-            <div className="empty-state">No entries yet. Be the first!</div>
+            <div className="empty-state">
+              <div className="empty-icon">🎮</div>
+              <p>No scores yet. Be the first!</p>
+            </div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Player</th>
-                  <th>Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((entry) => (
-                  <tr key={entry.rank} className={entry.username === playerStats?.username ? 'highlight' : ''}>
-                    <td className="rank">
-                      {entry.rank === 1 && '🥇'}
-                      {entry.rank === 2 && '🥈'}
-                      {entry.rank === 3 && '🥉'}
-                      {entry.rank > 3 && `#${entry.rank}`}
-                    </td>
-                    <td className="username">{entry.username}</td>
-                    <td className="score">{formatNumber(entry.score)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="leaderboard-list">
+              {leaderboard.map((entry) => (
+                <div key={entry.rank} className="leaderboard-entry">
+                  <div className="entry-rank">{getMedalEmoji(entry.rank)}</div>
+                  <div className="entry-username">{entry.username}</div>
+                  <div className="entry-score">{entry.score.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

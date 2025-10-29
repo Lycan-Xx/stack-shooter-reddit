@@ -39,6 +39,7 @@ export function useGameLoop(canvasRef) {
     expectedEnemies: 0,
     spawnedEnemies: 0,
     isFirstGame: true,
+    lasers: [],
   });
 
   const [isPaused, setIsPaused] = useState(false);
@@ -84,13 +85,11 @@ export function useGameLoop(canvasRef) {
   const hitMarkersRef = useRef([]);
   const damageNumbersRef = useRef([]);
   const hitEffectsRef = useRef([]);
-  const killFeedRef = useRef(new KillFeed());
   const imagesRef = useRef({
     playerAvatar: new Image(), // Current player's Snoo
     remoteAvatars: new Map(), // Remote players' Snoos
     vampire: new Image(), // Vampire enemy image
   });
-  const cursorLockRef = useRef({ locked: false, requested: false });
 
   useEffect(() => {
     // Load vampire image with fallback
@@ -148,19 +147,12 @@ export function useGameLoop(canvasRef) {
       dashCooldown: player.dashCooldown,
       maxDashCooldown: player.maxDashCooldown,
       powerUps: player.powerUps || [],
+      difficulty: game.difficulty,
     });
   };
 
   const showFloatingText = (x, y, text, color) => {
     floatingTextsRef.current.push(new FloatingText(x, y, text, color));
-  };
-
-  const showHitMarker = (x, y, isKill = false) => {
-    hitMarkersRef.current.push(new HitMarker(x, y, isKill));
-  };
-
-  const showDamageNumber = (x, y, damage, isKill = false) => {
-    damageNumbersRef.current.push(new DamageNumber(x, y, damage, isKill, false));
   };
 
   const showWaveInfo = (text) => {
@@ -179,20 +171,24 @@ export function useGameLoop(canvasRef) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Don't spawn waves in multiplayer - server handles enemies
-    if (game.isMultiplayer) {
-      return;
-    }
-
     if (game.waveInProgress) return;
 
     game.waveInProgress = true;
     game.waitingForNextWave = false;
 
-    const diff = DIFFICULTY[game.difficulty];
+    const diff = game.difficulty === 'challenge' ? DIFFICULTY.normal : DIFFICULTY[game.difficulty];
     const baseEnemies =
       game.state === 'tutorial' && game.tutorialStep < 5 ? 1 : diff.enemiesPerWave;
-    const numEnemies = baseEnemies + Math.floor((game.wave - 1) * 0.5);
+    let numEnemies = baseEnemies + Math.floor((game.wave - 1) * 0.5);
+    
+    // Apply challenge enemy count multiplier
+    if (game.challengeData && game.challengeData.modifiers) {
+      game.challengeData.modifiers.forEach(mod => {
+        if (mod.effect.enemyCountMultiplier) {
+          numEnemies = Math.floor(numEnemies * mod.effect.enemyCountMultiplier);
+        }
+      });
+    }
 
     game.expectedEnemies = numEnemies;
     game.spawnedEnemies = 0;
@@ -231,7 +227,8 @@ export function useGameLoop(canvasRef) {
           game.wave,
           game.difficulty,
           imagesRef.current,
-          playerRef.current
+          playerRef.current,
+          game.challengeData
         );
         enemiesRef.current.push(vampire);
         game.spawnedEnemies++;
@@ -245,7 +242,6 @@ export function useGameLoop(canvasRef) {
     const player = playerRef.current;
     const mouse = mouseRef.current;
     const game = gameRef.current;
-    const canvas = canvasRef.current;
     const now = Date.now();
 
     // Check fire rate with power-up bonus
@@ -261,15 +257,12 @@ export function useGameLoop(canvasRef) {
     const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
     // HITSCAN: Instant laser hit detection (solo mode only)
-      const maxRange = 2000;
       const dirX = Math.cos(angle);
       const dirY = Math.sin(angle);
       
       // Check hits against enemies
       let pierceCount = player.weapon.piercing;
       const hitEnemies = [];
-      
-      console.log(`[HITSCAN] Checking ${enemiesRef.current.length} enemies`);
       
       for (const enemy of enemiesRef.current) {
         // Vector from player to enemy
@@ -293,12 +286,9 @@ export function useGameLoop(canvasRef) {
         
         // Check if laser passes through enemy (within radius)
         if (distance <= enemy.radius) {
-          console.log(`[HITSCAN] HIT enemy at (${enemy.x}, ${enemy.y}), distance: ${distance}`);
           hitEnemies.push(enemy);
         }
       }
-      
-      console.log(`[HITSCAN] Total hits: ${hitEnemies.length}`);
       
       // Apply damage to hit enemies
       for (const enemy of hitEnemies) {
@@ -375,11 +365,6 @@ export function useGameLoop(canvasRef) {
         particlesRef.current.push(new Particle(player.x, player.y, '#4a90e2'));
       }
 
-      // Broadcast dash in multiplayer
-      if (game.isMultiplayer && multiplayerClient && multiplayerClient.isConnected) {
-        multiplayerClient.sendDash();
-      }
-
       setTimeout(() => {
         player.isDashing = false;
       }, player.dashDuration);
@@ -436,11 +421,23 @@ export function useGameLoop(canvasRef) {
     game.expectedEnemies = 0;
     game.spawnedEnemies = 0;
 
-    const diff = DIFFICULTY[game.difficulty];
+    const diff = game.difficulty === 'challenge' ? DIFFICULTY.normal : DIFFICULTY[game.difficulty];
+    
+    // Apply challenge player modifiers
+    let speedMult = 1.0;
+    let damageMult = 1.0;
+    
+    if (game.challengeData && game.challengeData.modifiers) {
+      game.challengeData.modifiers.forEach(mod => {
+        if (mod.effect.playerSpeedMultiplier) speedMult *= mod.effect.playerSpeedMultiplier;
+        if (mod.effect.playerDamageMultiplier) damageMult *= mod.effect.playerDamageMultiplier;
+      });
+    }
+    
     player.health = diff.playerHealth;
     player.maxHealth = diff.playerHealth;
-    player.speed = diff.playerSpeed;
-    player.weapon.damage = diff.playerDamage;
+    player.speed = diff.playerSpeed * speedMult;
+    player.weapon.damage = diff.playerDamage * damageMult;
     player.weapon.fireRate = diff.fireRate;
     player.maxDashCooldown = diff.dashCooldown;
     player.weapon.piercing = 0;
@@ -460,20 +457,28 @@ export function useGameLoop(canvasRef) {
     spawnWave();
   };
 
-  const startGame = (selectedDifficulty) => {
+  const startGame = (selectedDifficulty, challengeData = null) => {
     const game = gameRef.current;
 
     soundManager.play('uiClick');
-    game.difficulty = selectedDifficulty;
-    setDifficulty(selectedDifficulty);
+    
+    if (challengeData) {
+      game.difficulty = 'challenge';
+      game.challengeData = challengeData;
+      setDifficulty('challenge');
+      setDifficultyBadge(`📅 ${challengeData.name.toUpperCase()}`);
+    } else {
+      game.difficulty = selectedDifficulty;
+      setDifficulty(selectedDifficulty);
 
-    const badges = {
-      easy: '😊 EASY MODE',
-      normal: '😐 NORMAL MODE',
-      hard: '😰 HARD MODE',
-      nightmare: '💀 NIGHTMARE MODE',
-    };
-    setDifficultyBadge(badges[selectedDifficulty]);
+      const badges = {
+        easy: '😊 EASY MODE',
+        normal: '😐 NORMAL MODE',
+        hard: '😰 HARD MODE',
+        nightmare: '💀 NIGHTMARE MODE',
+      };
+      setDifficultyBadge(badges[selectedDifficulty]);
+    }
 
     setGameState('playing');
     game.state = 'playing';
@@ -668,16 +673,15 @@ export function useGameLoop(canvasRef) {
       }
     }
 
-    // Wave completion logic only for solo mode
-    if (!game.isMultiplayer) {
-      const allEnemiesSpawned = game.spawnedEnemies >= game.expectedEnemies;
-      if (
-        enemies.length === 0 &&
-        game.waveInProgress &&
-        !game.waitingForNextWave &&
-        allEnemiesSpawned &&
-        (game.state === 'playing' || game.state === 'tutorial')
-      ) {
+    // Wave completion logic
+    const allEnemiesSpawned = game.spawnedEnemies >= game.expectedEnemies;
+    if (
+      enemies.length === 0 &&
+      game.waveInProgress &&
+      !game.waitingForNextWave &&
+      allEnemiesSpawned &&
+      (game.state === 'playing' || game.state === 'tutorial')
+    ) {
         game.waveInProgress = false;
         game.waitingForNextWave = true;
 
@@ -717,7 +721,6 @@ export function useGameLoop(canvasRef) {
           }, 2000);
         }
       }
-    }
   };
 
   const draw = () => {
@@ -825,11 +828,6 @@ export function useGameLoop(canvasRef) {
       hitMarkersRef.current.forEach((marker) => marker.draw(ctx));
       damageNumbersRef.current.forEach((number) => number.draw(ctx));
       hitEffectsRef.current.forEach((effect) => effect.draw(ctx));
-
-      // Draw kill feed in multiplayer
-      if (game.isMultiplayer) {
-        killFeedRef.current.draw(ctx, canvas);
-      }
     }
   };
 

@@ -9,12 +9,12 @@ export const createPost = async () => {
   return await reddit.submitCustomPost({
     splash: {
       // Splash Screen Configuration
-      appDisplayName: 'Vampire Siege',
+      appDisplayName: 'Stack Shooter: Vampire Siege',
       backgroundUri: 'vampire-splash.png',
       buttonLabel: '🧛 Play Now',
-      description: 'Survive endless waves of vampires! Shoot, dash, and upgrade your way through the undead horde.',
-      entryUri: 'index.html',
-      heading: '🧛 Vampire Siege',
+      description:
+        'A top-down survival shooter! Defend against endless waves of vampires. Shoot, dash, and upgrade your way through the undead horde.',
+      heading: '🧛 Stack Shooter: Vampire Siege',
       appIconUri: 'vampire-icon.png',
     },
     postData: {
@@ -22,6 +22,6 @@ export const createPost = async () => {
       score: 0,
     },
     subredditName: subredditName,
-    title: '🧛 Vampire Siege - Survive the Undead Horde!',
+    title: '🧛 Stack Shooter: Vampire Siege - Survive the Undead Horde!',
   });
 };

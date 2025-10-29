@@ -59,6 +59,7 @@ export default function Game() {
             wave={hudData.wave}
             kills={hudData.kills}
             score={hudData.score}
+            difficulty={hudData.difficulty || 'normal'}
             onRestart={restartGame}
             onMainMenu={restartGame}
           />
