@@ -8,6 +8,7 @@ import { redis, reddit, createServer, context, getServerPort } from '@devvit/web
 import { createPost } from './core/post';
 import { LeaderboardService } from './core/leaderboard';
 import { ChallengeService } from './core/challenges';
+import { SquadService } from './core/squads';
 
 const app = express();
 
@@ -163,6 +164,9 @@ router.post('/api/score/submit', async (req, res): Promise<void> => {
       kills,
       false
     );
+
+    // Add score to squad if user is in one
+    await SquadService.addSquadScore(username, score, kills, false);
 
     const rank = await LeaderboardService.getPlayerRank(username);
     
@@ -382,6 +386,127 @@ router.get('/api/challenge/stats', async (req, res): Promise<void> => {
   } catch (error) {
     console.error('Error getting challenge stats:', error);
     res.status(500).json({ success: false, stats: null });
+  }
+});
+
+// Squad endpoints
+router.post('/api/squad/create', async (req, res): Promise<void> => {
+  const { name, tag } = req.body as { name: string; tag: string };
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, error: 'Not authenticated' });
+      return;
+    }
+
+    const result = await SquadService.createSquad(username, name, tag);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating squad:', error);
+    res.status(500).json({ success: false, error: 'Failed to create squad' });
+  }
+});
+
+router.get('/api/squad/my', async (_req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, squad: null });
+      return;
+    }
+
+    const squad = await SquadService.getUserSquad(username);
+    res.json({ success: true, squad });
+  } catch (error) {
+    console.error('Error getting user squad:', error);
+    res.status(500).json({ success: false, squad: null });
+  }
+});
+
+router.get('/api/squad/:squadId', async (req, res): Promise<void> => {
+  const { squadId } = req.params;
+
+  try {
+    const squad = await SquadService.getSquad(squadId);
+    res.json({ success: true, squad });
+  } catch (error) {
+    console.error('Error getting squad:', error);
+    res.status(500).json({ success: false, squad: null });
+  }
+});
+
+router.get('/api/squad/:squadId/members', async (req, res): Promise<void> => {
+  const { squadId } = req.params;
+
+  try {
+    const members = await SquadService.getSquadMembers(squadId);
+    res.json({ success: true, members });
+  } catch (error) {
+    console.error('Error getting squad members:', error);
+    res.status(500).json({ success: false, members: [] });
+  }
+});
+
+router.post('/api/squad/invite', async (req, res): Promise<void> => {
+  const { squadId, invitedUser } = req.body as { squadId: string; invitedUser: string };
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, error: 'Not authenticated' });
+      return;
+    }
+
+    const result = await SquadService.inviteUser(squadId, username, invitedUser);
+    res.json(result);
+  } catch (error) {
+    console.error('Error inviting user:', error);
+    res.status(500).json({ success: false, error: 'Failed to invite user' });
+  }
+});
+
+router.post('/api/squad/join', async (req, res): Promise<void> => {
+  const { squadId } = req.body as { squadId: string };
+
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, error: 'Not authenticated' });
+      return;
+    }
+
+    const result = await SquadService.acceptInvite(username, squadId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error joining squad:', error);
+    res.status(500).json({ success: false, error: 'Failed to join squad' });
+  }
+});
+
+router.post('/api/squad/leave', async (_req, res): Promise<void> => {
+  try {
+    const username = await reddit.getCurrentUsername();
+    if (!username) {
+      res.status(400).json({ success: false, error: 'Not authenticated' });
+      return;
+    }
+
+    const result = await SquadService.leaveSquad(username);
+    res.json(result);
+  } catch (error) {
+    console.error('Error leaving squad:', error);
+    res.status(500).json({ success: false, error: 'Failed to leave squad' });
+  }
+});
+
+router.get('/api/squad/leaderboard', async (_req, res): Promise<void> => {
+  try {
+    const leaderboard = await SquadService.getSquadLeaderboard();
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    console.error('Error getting squad leaderboard:', error);
+    res.status(500).json({ success: false, leaderboard: [] });
   }
 });
 

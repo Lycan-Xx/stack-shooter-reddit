@@ -121,6 +121,18 @@
   transform: scale(0.95);
 }
 
+/* Show mobile controls on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  #desktop-wasd-controls {
+    display: none;
+  }
+
+  #mobile-controls {
+    display: block;
+  }
+}
+
+/* Fallback for small screens without touch detection */
 @media (max-width: 768px) {
   #desktop-wasd-controls {
     display: none;

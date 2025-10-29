@@ -689,7 +689,11 @@ export function useGameLoop(canvasRef) {
         updateHUD();
 
         soundManager.play('waveComplete');
-        const bonus = 50 * DIFFICULTY[game.difficulty].scoreMultiplier;
+        
+        // Get difficulty settings (use normal for challenge mode)
+        const diff = game.difficulty === 'challenge' ? DIFFICULTY.normal : DIFFICULTY[game.difficulty];
+        const bonus = 50 * diff.scoreMultiplier;
+        
         if (bonus > 0) {
           game.score += bonus;
           updateHUD();

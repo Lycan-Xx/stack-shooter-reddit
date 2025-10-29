@@ -7,6 +7,21 @@ export default function Controls({ performDash, wasdKeys }) {
   const joystickActive = useRef(false);
   const joystickId = useRef(null);
 
+  // Detect if device has touch capability
+  useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const desktopControls = document.getElementById('desktop-wasd-controls');
+    const mobileControls = document.getElementById('mobile-controls');
+
+    if (isTouchDevice) {
+      if (desktopControls) desktopControls.style.display = 'none';
+      if (mobileControls) mobileControls.style.display = 'block';
+    } else {
+      if (desktopControls) desktopControls.style.display = 'block';
+      if (mobileControls) mobileControls.style.display = 'none';
+    }
+  }, []);
+
   useEffect(() => {
     const joystickContainer = joystickRef.current;
     const stick = stickRef.current;

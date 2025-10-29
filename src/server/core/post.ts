@@ -10,12 +10,12 @@ export const createPost = async () => {
     splash: {
       // Splash Screen Configuration
       appDisplayName: 'Stack Shooter: Vampire Siege',
-      backgroundUri: 'vampire-splash.png',
+      backgroundUri: 'default-splash.png',
       buttonLabel: '🧛 Play Now',
       description:
         'A top-down survival shooter! Defend against endless waves of vampires. Shoot, dash, and upgrade your way through the undead horde.',
       heading: '🧛 Stack Shooter: Vampire Siege',
-      appIconUri: 'vampire-icon.png',
+      appIconUri: 'default-icon.png',
     },
     postData: {
       gameState: 'initial',

@@ -48,4 +48,16 @@ export const DIFFICULTY = {
     dashCooldown: 5000,
     scoreMultiplier: 5,
   },
+  nightmare: {
+    playerHealth: 50,
+    playerSpeed: 4.5,
+    playerDamage: 35,
+    enemyHealth: 200,
+    enemySpeed: 1.5,
+    enemyDamage: 30,
+    enemiesPerWave: 10,
+    fireRate: 400,
+    dashCooldown: 6000,
+    scoreMultiplier: 10,
+  },
 };
