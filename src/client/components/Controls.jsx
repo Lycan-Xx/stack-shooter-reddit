@@ -114,6 +114,15 @@ export default function Controls({ performDash, wasdKeys }) {
     }
   };
 
+  const handleFirePress = () => {
+    // Set window flag for continuous firing while pressed
+    window.mobileFireActive = true;
+  };
+
+  const handleFireRelease = () => {
+    window.mobileFireActive = false;
+  };
+
   return (
     <>
       {/* Desktop WASD Controls */}
@@ -166,9 +175,27 @@ export default function Controls({ performDash, wasdKeys }) {
           <div id="joystick-base"></div>
           <div id="joystick-stick" ref={stickRef}></div>
         </div>
-        <button id="mobile-dash" onClick={handleDashClick}>
-          DASH
-        </button>
+        
+        <div className="mobile-action-buttons">
+          <button 
+            id="mobile-fire" 
+            onTouchStart={handleFirePress}
+            onTouchEnd={handleFireRelease}
+            onMouseDown={handleFirePress}
+            onMouseUp={handleFireRelease}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+              <path d="M12 2v4M12 18v4M22 12h-4M6 12H2M19.07 4.93l-2.83 2.83M7.76 16.24l-2.83 2.83M19.07 19.07l-2.83-2.83M7.76 7.76L4.93 4.93"/>
+            </svg>
+          </button>
+          
+          <button id="mobile-dash" onClick={handleDashClick}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </>
   );

@@ -616,7 +616,7 @@ export function useGameLoop(canvasRef) {
 
     player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-    if (mouse.down) {
+    if (mouse.down || window.mobileFireActive) {
       shoot();
     }
 

@@ -8,7 +8,6 @@ import UpgradeScreen from './UpgradeScreen';
 import TutorialOverlay from './TutorialOverlay';
 import PauseMenu from './PauseMenu';
 import Controls from './Controls';
-import MuteButton from './MuteButton';
 import StatsModal from './StatsModal';
 import './Game.css';
 
@@ -93,8 +92,6 @@ export default function Game() {
       <div id="crosshair"></div>
 
       <Controls performDash={performDash} wasdKeys={wasdKeys} />
-
-      <MuteButton soundManager={soundManager} />
     </div>
   );
 }

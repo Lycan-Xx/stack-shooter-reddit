@@ -65,34 +65,10 @@ export default function StartScreen({ onStartGame, onStartTutorial }) {
         <div className="header-section">
           <h1 className="game-title">🧛 Vampire Siege</h1>
           <p className="game-description">
-            Defend against endless waves of vampires in this intense top-down shooter!
+            Defend against endless hordes of vampires in this intense top-down shooter! 
+            Survive waves, collect upgrades, and hold your ground against the undead!
           </p>
         </div>
-
-        {/* Community Stats */}
-        {communityStats && (
-          <div className="stats-section">
-            <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-icon">🧛</span>
-                <span className="stat-value">{formatNumber(communityStats.totalVampiresKilled)}</span>
-                <span className="stat-label">Vampires Slain</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-icon">⚔️</span>
-                <span className="stat-value">{formatNumber(communityStats.totalMatches)}</span>
-                <span className="stat-label">Battles Fought</span>
-              </div>
-              {playerStats && (
-                <div className="stat-card personal">
-                  <span className="stat-icon">🏆</span>
-                  <span className="stat-value">{playerStats.bestScore.toLocaleString()}</span>
-                  <span className="stat-label">Your Best</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Main Menu Buttons */}
         <div className="main-menu">
