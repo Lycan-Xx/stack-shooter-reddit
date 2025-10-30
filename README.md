@@ -1,85 +1,278 @@
-## 🧛 Stack Shooter: Vampire Siege
+# 🧛 Stack Shooter: Vampire Siege
 
-An intense top-down survival shooter game built for Reddit's Devvit platform. Defend against endless waves of vampires, collect powerful upgrades, and hold your ground as long as you can in this fast-paced action game.
+A community-focused survival shooter built for Reddit's Devvit platform. Defend against endless waves of vampires while competing with your subreddit and squad for glory.
 
-### What Makes This Game Unique
+**Built for the Reddit x Kiro Hackathon 2025**
 
-- **Vampire Survivors-Style Progression**: Unlock powerful upgrades every 3 waves to customize your playstyle
-- **Dynamic Difficulty System**: Choose from 4 difficulty modes (Easy, Normal, Hard, Nightmare) that dramatically change gameplay
-- **Mobile-First Design**: Fully optimized for both desktop and mobile with touch controls and virtual joystick
-- **Progressive Wave System**: Enemies get stronger and more numerous as you advance through waves
-- **Dash Mechanic**: Strategic dash ability with energy management adds depth to combat
-- **Visual Polish**: Particle effects, blood splatters, floating damage numbers, and smooth animations
-- **Built-in Tutorial**: Interactive tutorial mode teaches new players the mechanics step-by-step
-- **Reddit Integration**: Runs natively within Reddit posts using Devvit's web platform
+---
 
-### How to Play
+## 🎮 What Makes This Different
 
-**Objective**: Survive as many waves as possible while racking up kills and points. Complete waves to unlock upgrades and become stronger.
+Most games just post on Reddit and hope for upvotes. Stack Shooter is **designed for Reddit's community structure** - your subreddit membership actually matters.
 
-**Controls**:
+### Core Gameplay
+- **Vampire Survivors-Style Action**: Top-down shooter with wave-based progression
+- **4 Difficulty Modes**: Easy, Normal, Hard, Nightmare
+- **6 Upgrade Paths**: Vitality, Firepower, Rapid Fire, Agility, Quick Dash, Piercing Shots
+- **Mobile-First Design**: Touch controls, virtual joystick, optimized for phones
+- **Tutorial Mode**: Interactive onboarding for new players
 
-- Desktop: WASD or Arrow Keys to move, Mouse to aim, Click to shoot, Spacebar to dash
-- Mobile: Virtual joystick to move, Tap anywhere to shoot, Dash button for quick escapes
+### Community Features (The Innovation)
 
-**Gameplay Loop**:
+**🏆 4 Leaderboard Types**
+- **Global**: Compete with everyone worldwide
+- **Subreddit**: r/gaming vs r/indiegaming - community pride
+- **Daily**: Resets every 24 hours - fresh competition
+- **Weekly**: Consistent performance over time
 
-1. Start by selecting your difficulty or playing the tutorial
-2. Vampires spawn from the edges of the screen and chase you
-3. Shoot them down before they reach you and drain your health
-4. Clear all enemies to complete the wave and restore your health
-5. Every 3 waves, choose from 3 random upgrades to enhance your abilities
-6. Survive as long as possible and achieve the highest score
+**👥 Squad System**
+- Create or join squads (teams within your subreddit)
+- Individual scores combine into squad totals
+- Squad vs squad competition
+- Team leaderboards
 
-**Upgrades Available**:
+**🎯 Daily Challenges**
+- Same modifiers for everyone each day
+- 8 unique challenge types (Speed Demons, The Horde, Tank Mode, etc.)
+- Creates shared experiences to discuss in comments
+- Challenge-specific leaderboards
 
-- ❤️ Vitality: Increase max health (5 levels)
-- 💥 Firepower: Increase bullet damage (5 levels)
-- ⚡ Rapid Fire: Shoot faster (5 levels)
-- 🏃 Agility: Move faster (5 levels)
-- 💨 Quick Dash: Reduce dash cooldown (5 levels)
-- 🎯 Piercing Shots: Bullets pierce through enemies (3 levels)
+**� CommunDity Stats**
+- Track collective achievements
+- Total vampires killed across all players
+- Total battles fought
+- Subreddit vs subreddit competition
 
-**Difficulty Modes**:
+### Why This Works on Reddit
+- **Async Multiplayer**: Play anytime, score still counts
+- **No Lag**: No servers, no battery drain
+- **Mobile Perfect**: Works great on phones where Reddit users browse
+- **Community Identity**: Subreddit leaderboards create pride and rivalry
+- **Emergent Behavior**: Squads form tournaments, subreddits coordinate challenges
 
-- 😊 Easy: More health, faster movement, fewer enemies
-- 😐 Normal: Balanced gameplay for standard challenge
-- 😰 Hard: Less health, tougher enemies, higher rewards
-- 💀 Nightmare: Extreme challenge for veteran players
+---
 
-**Tips**:
+## 🎯 How to Play
 
-- Use dash strategically to escape when surrounded
+### Controls
+- **Desktop**: WASD/Arrows to move, Mouse to aim, Click to shoot, Spacebar to dash
+- **Mobile**: Virtual joystick to move, Tap to shoot, Dash button
+
+### Gameplay Loop
+1. Select difficulty or try tutorial
+2. Survive waves of vampires
+3. Unlock upgrades every 3 waves
+4. Your score goes to your squad and subreddit
+5. Compete on 4 different leaderboards
+6. Try daily challenges for shared competition
+
+### Tips
+- Use dash strategically when surrounded
 - Keep moving to avoid getting cornered
-- Aim for groups of enemies if you have piercing shots
 - Balance offensive and defensive upgrades
-- Watch your dash energy - it regenerates over time
+- Join a squad to compete as a team
+- Try daily challenges for variety
 
-### Technology Stack
+---
 
-- [Devvit](https://developers.reddit.com/): A way to build and deploy immersive games on Reddit
-- [Vite](https://vite.dev/): For compiling the webView
-- [React](https://react.dev/): For UI
-- [Express](https://expressjs.com/): For backend logic
-- [Typescript](https://www.typescriptlang.org/): For type safety
+## 🛠️ Technology Stack
 
-## Getting Started
+- **[Devvit](https://developers.reddit.com/)**: Reddit's developer platform
+- **[React](https://react.dev/)**: Frontend UI
+- **[TypeScript](https://www.typescriptlang.org/)**: Type-safe development
+- **[Vite](https://vite.dev/)**: Build tool
+- **[Express](https://expressjs.com/)**: Backend API
+- **Redis**: Data persistence (via Devvit)
 
-> Make sure you have Node 22 downloaded on your machine before running!
+---
 
-1. Run `npm create devvit@latest --template=react`
-2. Go through the installation wizard. You will need to create a Reddit account and connect it to Reddit developers
-3. Copy the command on the success page into your terminal
+## 🚀 Getting Started
 
-## Commands
+### Prerequisites
+- Node.js 22+ installed
+- Reddit account
+- Devvit CLI
 
-- `npm run dev`: Starts a development server where you can develop your application live on Reddit.
-- `npm run build`: Builds your client and server projects
-- `npm run deploy`: Uploads a new version of your app
-- `npm run launch`: Publishes your app for review
-- `npm run login`: Logs your CLI into Reddit
-- `npm run check`: Type checks, lints, and prettifies your app
+### Installation
 
-## Cursor Integration
+1. **Clone the repository**
+```bash
+git clone https://github.com/Lycan-Xx/stack-shooter-reddit.git
+cd stack-shooter-reddit
+```
 
-This template comes with a pre-configured cursor environment. To get started, [download cursor](https://www.cursor.com/downloads) and enable the `devvit-mcp` when prompted.
+2. **Install dependencies**
+```bash
+npm install
+```
+
+3. **Login to Devvit**
+```bash
+npm run login
+```
+
+4. **Start development server**
+```bash
+npm run dev
+```
+
+This will:
+- Build client and server
+- Start Devvit playtest
+- Provide a Reddit URL to test your app
+
+### Commands
+
+```bash
+npm run dev          # Development with live reload
+npm run build        # Build for production
+npm run deploy       # Upload to Reddit
+npm run launch       # Publish for review
+npm run check        # Type check, lint, format
+npm run login        # Login to Devvit CLI
+```
+
+---
+
+## 📁 Project Structure
+
+```
+stack-shooter/
+├── src/
+│   ├── client/          # React frontend
+│   │   ├── components/  # UI components
+│   │   ├── hooks/       # Custom React hooks
+│   │   ├── lib/         # Game logic
+│   │   └── main.jsx     # Entry point
+│   ├── server/          # Express backend
+│   │   ├── core/        # Business logic
+│   │   │   ├── leaderboard.ts
+│   │   │   ├── challenges.ts
+│   │   │   └── squads.ts
+│   │   └── index.ts     # API endpoints
+│   └── shared/          # Shared types
+│       └── types/
+│           └── api.ts   # Type definitions
+├── docs/                # Documentation
+│   ├── hackathon/       # Hackathon submission docs
+│   └── development/     # Development phase docs
+├── .kiro/               # Kiro AI configuration
+│   ├── hooks/           # Custom automation hooks
+│   └── steering/        # Best practice guides
+└── devvit.json          # Devvit configuration
+```
+
+---
+
+## 🏆 Hackathon Submission
+
+This project was built for the **Reddit x Kiro Hackathon 2025** (October 13-29, 2025).
+
+### Categories
+- **Community Play**: Squad system, daily challenges, 4 leaderboard types
+- **Best Kiro Developer Experience**: 60+ hours of deliberate development with Kiro
+
+### Key Features for Judging
+- ✅ Custom first screen with community stats
+- ✅ Subreddit-specific leaderboards (unique!)
+- ✅ Squad system for team competition
+- ✅ Daily challenges with 8 modifiers
+- ✅ Async multiplayer perfect for mobile
+- ✅ Clean, type-safe architecture
+- ✅ Comprehensive documentation
+
+### Documentation
+- **Kiro Development Experience**: `docs/hackathon/KIRO_DEVELOPMENT_EXPERIENCE.md`
+- **Hackathon Readiness**: `docs/hackathon/HACKATHON_READINESS.md`
+- **Video Script**: `docs/hackathon/FINAL_VIDEO_SCRIPT.md`
+- **Phase Documentation**: `docs/development/PHASE*.md`
+
+---
+
+## 🎨 Development with Kiro
+
+This project was built using **Kiro AI** as a conversational development partner over 60+ hours.
+
+### Kiro Integration
+- **Custom Hooks**: Auto-commit messages, README updates, splash screen generation
+- **Steering Files**: Best practices, API patterns, refactoring checklists
+- **Phased Development**: PHASE1 (cleanup), PHASE2 (leaderboards), PHASE3 (challenges)
+
+### Key Learnings
+- Used Kiro conversationally to discuss problems and solutions
+- Created custom automation for workflow efficiency
+- Documented journey in phases for clarity
+- Built deliberately, understanding every architectural decision
+
+See `docs/hackathon/KIRO_DEVELOPMENT_EXPERIENCE.md` for full details.
+
+---
+
+## 🎯 Features
+
+### Gameplay
+- [x] 4 difficulty modes
+- [x] 6 upgrade paths with multiple levels
+- [x] Wave-based progression
+- [x] Dash mechanic with energy management
+- [x] Tutorial mode
+- [x] Mobile touch controls
+- [x] Particle effects and visual polish
+
+### Community
+- [x] Global leaderboard
+- [x] Subreddit-specific leaderboards
+- [x] Daily leaderboards
+- [x] Weekly leaderboards
+- [x] Squad creation and management
+- [x] Squad leaderboards
+- [x] Daily challenges with 8 modifiers
+- [x] Community statistics
+- [x] Personal statistics
+
+### Technical
+- [x] Type-safe client-server communication
+- [x] Responsive design (mobile/tablet/desktop)
+- [x] Redis data persistence
+- [x] Clean, modular architecture
+- [x] Zero compilation errors
+- [x] Comprehensive documentation
+
+---
+
+## 📝 License
+
+BSD-3-Clause License - See [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
+
+This project was built for a hackathon and is primarily for demonstration purposes. However, if you'd like to contribute:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 🔗 Links
+
+- **Repository**: https://github.com/Lycan-Xx/stack-shooter-reddit.git
+- **Devvit Platform**: https://developers.reddit.com/
+- **Kiro AI**: https://kiro.ai/
+
+---
+
+## 📧 Contact
+
+Built by **Lycan-Xx** for the Reddit x Kiro Hackathon 2025.
+
+- **Email**: msbello514@gmail.com
+- **GitHub**: [@Lycan-Xx](https://github.com/Lycan-Xx)
+
+---
+
+**Stack Shooter: Where your subreddit membership actually matters.** 🧛‍♂️🎮
+
